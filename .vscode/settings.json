@@ -1,0 +1,19 @@
+{
+    // Run Lint tool on save.
+    "go.lintOnSave": true,
+    // Specifies Lint tool name.
+    "go.lintTool": "golint",
+    // Flags to pass to Lint tool (e.g. ["-min_confidence=.8"])
+    "go.lintFlags": [],
+    "files.watcherExclude": {
+        "**/.git/objects/**": true,
+        "**/.git/subtree-cache/**": true,
+        "**/node_modules/*/**": true,
+    },
+    "editor.codeActionsOnSave": {
+        "source.fixAll": true,
+        "source.organizeImports": true
+    },
+    "cSpell.ignoreWords": [
+    ],
+}
