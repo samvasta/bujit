@@ -1,0 +1,49 @@
+package actions
+
+import "samvasta.com/bujit/models"
+
+type ActionType int
+
+const (
+	// Meta Actions
+	EXIT ActionType = iota
+	VERSION
+	HELP
+	SUGGEST
+
+	// Account Actions
+	NEW_ACCOUNT
+	DELETE_ACCOUNT
+	MODIFY_ACCOUNT
+	LIST_ACCOUNT
+
+	// Account State Actions
+	LIST_ACCOUNT_STATE
+
+	// Transaction Actions
+	DETAIL_ACCOUNT
+	NEW_TRANSACTION
+	LIST_TRANSACTION
+)
+
+type ConsequenceType int
+
+const (
+	CREATE ConsequenceType = iota
+	READ
+	UPDATE
+	DELETE
+)
+
+type Consequence struct {
+	consequenceType ConsequenceType
+	object          models.Detailser
+}
+
+type ActionResult struct {
+	output string
+}
+
+type Actioner interface {
+	execute() (ActionResult, []*Consequence)
+}
