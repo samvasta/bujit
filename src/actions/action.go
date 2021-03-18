@@ -1,6 +1,8 @@
 package actions
 
-import "samvasta.com/bujit/models"
+import (
+	"encoding/json"
+)
 
 type ActionType int
 
@@ -37,7 +39,7 @@ const (
 
 type Consequence struct {
 	consequenceType ConsequenceType
-	object          models.Detailser
+	object          json.Marshaler
 }
 
 type ActionResult struct {

@@ -5,7 +5,6 @@ import (
 	"regexp"
 	"sort"
 	"strings"
-	"unicode"
 )
 
 const CurrencySymbols string = "$€£¥₿ɱŁ"
@@ -18,13 +17,28 @@ var ItemNamePattern *regexp.Regexp = regexp.MustCompile(`[a-zA-Z][a-zA-Z_-]+`)
 type TokenPattern struct {
 	Id          int
 	DisplayName string
-	Pattern     *regexp.Regexp
+	Patterns    []*regexp.Regexp
 }
 
 func (tok *TokenPattern) Matches(input string) bool {
-	idx := tok.Pattern.FindStringIndex(input)
-	fmt.Print(idx)
-	return idx != nil && idx[0] == 0 && idx[1] == len(input)
+	for _, pattern := range tok.Patterns {
+		idx := pattern.FindStringIndex(input)
+		if idx != nil && idx[0] == 0 && idx[1] == len(input) {
+			return true
+		}
+	}
+	return false
+}
+
+func (token *TokenPattern) LiteralPatternStrings() (patterns []string) {
+	for _, pattern := range token.Patterns {
+		prefix, _ := pattern.LiteralPrefix()
+
+		if len(prefix) > 0 {
+			patterns = append(patterns, prefix)
+		}
+	}
+	return patterns
 }
 
 func DisplayNames(tokens []*TokenPattern) (names []string) {
@@ -35,31 +49,19 @@ func DisplayNames(tokens []*TokenPattern) (names []string) {
 }
 
 func MakeLiteralToken(id int, literalOptions ...string) *TokenPattern {
-	var sb strings.Builder
+	var patterns []*regexp.Regexp
 
-	for i, option := range literalOptions {
-		if i > 0 {
-			sb.WriteRune('|')
-		}
-		// Lowercase
-		for _, char := range option {
-			sb.WriteRune(unicode.ToLower(char))
-		}
-
-		// Uppercase
-		sb.WriteRune('|')
-		for _, char := range option {
-			sb.WriteRune(unicode.ToUpper(char))
-		}
+	for _, option := range literalOptions {
+		patterns = append(patterns, regexp.MustCompile(strings.ToUpper(option)))
+		patterns = append(patterns, regexp.MustCompile(strings.ToLower(option)))
 	}
 
-	return &TokenPattern{id, literalOptions[0], regexp.MustCompile(sb.String())}
+	return &TokenPattern{id, literalOptions[0], patterns}
 }
 
-var ArgumentTokenPattern *regexp.Regexp = regexp.MustCompile("[ a-zA-Z0-9]+")
+var ArgumentTokenPattern *regexp.Regexp = regexp.MustCompile("[a-zA-Z0-9]+")
 
 func MakeArgToken(id int, displayName string, pattern *regexp.Regexp) *TokenPattern {
-	var finalName string
 	var sb strings.Builder
 
 	sb.WriteRune('<')
@@ -71,22 +73,22 @@ func MakeArgToken(id int, displayName string, pattern *regexp.Regexp) *TokenPatt
 	}
 	sb.WriteRune('>')
 
-	return &TokenPattern{id, finalName, pattern}
+	return &TokenPattern{id, sb.String(), []*regexp.Regexp{pattern}}
 }
 
-var TokenizePattern = regexp.MustCompile(regexp.QuoteMeta(`[^\s"']+|"([^"]*)"|'([^']*)'`))
+var TokenizePattern = regexp.MustCompile(`[^\s"']+|"([^"]*)"|'([^']*)'`)
 
 func Tokenize(input string) (tokens []string) {
 	matches := TokenizePattern.FindAllStringSubmatch(input, -1)
-	fmt.Println(matches)
 	for _, match := range matches {
-		if match[1] != "" {
+		if match[2] != "" {
+			tokens = append(tokens, match[2])
+		} else if match[1] != "" {
 			tokens = append(tokens, match[1])
 		} else {
 			tokens = append(tokens, match[0])
 		}
 	}
-	fmt.Println(tokens)
 	return tokens
 }
 
@@ -114,16 +116,20 @@ func PossibleMatches(test string, possibleTokens []*TokenPattern) (exactMatch *T
 
 	//Remove bad tokens & store match lengths for sorting
 	for i, tok := range possibleTokens {
-		prefix, _ := tok.Pattern.LiteralPrefix()
+		for _, pattern := range tok.Patterns {
+			prefix, _ := pattern.LiteralPrefix()
 
-		if len(prefix) > 0 {
-			lenOfMatch := LengthOfMatch(test, prefix)
-			matchLens[i] = lenOfMatch
-			if lenOfMatch > 0 {
-				possibleMatches = append(possibleMatches, tok)
-			}
-			if lenOfMatch == len(test) {
-				exactMatch = tok
+			fmt.Printf(prefix)
+
+			if len(prefix) > 0 {
+				lenOfMatch := LengthOfMatch(test, prefix)
+				matchLens[i] = lenOfMatch
+				if lenOfMatch > 0 {
+					possibleMatches = append(possibleMatches, tok)
+				}
+				if lenOfMatch == len(test) {
+					exactMatch = tok
+				}
 			}
 		}
 	}

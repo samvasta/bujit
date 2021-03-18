@@ -1,90 +1,79 @@
 package models
 
 import (
+	"encoding/json"
 	"time"
-
-	humanize "github.com/dustin/go-humanize"
 )
 
-type Detailser interface {
-	Details() map[string]interface{}
-}
-
 type AccountState struct {
-	id         int64
-	timestamp  time.Time
-	balance    *Money
-	prev_state *AccountState
-}
-
-func (accountState *AccountState) Details() (details map[string]interface{}) {
-	details["ID"] = accountState.id
-	details["Timestamp"] = humanize.Time(accountState.timestamp)
-	details["Balance"] = accountState.balance.String()
-
-	return details
+	Id        int64         `json:"id"`
+	Timestamp time.Time     `json:"timestamp"`
+	Balance   Money         `json:"balance"`
+	prevState *AccountState `json:"-"`
 }
 
 type Account struct {
-	id            int64
-	name          string
-	isActive      bool
-	description   string
-	created_on    time.Time
-	current_state *AccountState
+	Id           int64
+	Name         string
+	IsActive     bool
+	Description  string
+	CreatedOn    time.Time
+	CurrentState *AccountState
 }
 
-func (account *Account) Balance() *Money {
-	return account.current_state.balance
+func (account *Account) Balance() Money {
+	return account.CurrentState.Balance
 }
 
-func (account *Account) Details() (details map[string]interface{}) {
-	details["ID"] = account.id
-	details["Name"] = account.name
+func (account Account) MarshalJSON() ([]byte, error) {
+	details := make(map[string]interface{})
+	details["id"] = account.Id
+	details["name"] = account.Name
 
-	if account.isActive {
-		details["Status"] = "open"
+	if account.IsActive {
+		details["status"] = "open"
 	} else {
-		details["Status"] = "closed"
+		details["status"] = "closed"
 	}
 
-	details["Description"] = account.description
-	details["Created on"] = humanize.Time(account.created_on)
-	details["Updated on"] = humanize.Time(account.current_state.timestamp)
-	details["Current Balance"] = account.Balance().String()
+	details["description"] = account.Description
+	details["createdOn"] = account.CreatedOn
+	details["updatedOn"] = account.CurrentState.Timestamp
+	details["currentBalance"] = account.Balance().String()
 
-	return details
+	return json.Marshal(details)
 }
 
 type Transaction struct {
-	id          int64
-	timestamp   time.Time
-	change      Money
-	source      *Account
-	destination *Account
-	memo        string
+	Id          int64
+	Timestamp   time.Time
+	Change      Money
+	Source      *Account
+	Destination *Account
+	Memo        string
 }
 
 func (tran *Transaction) SourceExists() bool {
-	return tran.source != nil
+	return tran.Source != nil
 }
 func (tran *Transaction) DestinationExists() bool {
-	return tran.destination != nil
+	return tran.Destination != nil
 }
 
-func (tran *Transaction) Details() (details map[string]interface{}) {
-	details["ID"] = tran.id
-	details["Timestamp"] = humanize.Time(tran.timestamp)
-	details["Amount"] = tran.change.String()
+func (tran Transaction) MarshalJSON() ([]byte, error) {
+	details := make(map[string]interface{})
+	details["id"] = tran.Id
+	details["timestamp"] = tran.Timestamp
+	details["amount"] = tran.Change.String()
 
 	if tran.SourceExists() {
-		details["Source Account"] = tran.source.name
+		details["fromAccount"] = tran.Source.Name
 	}
 	if tran.DestinationExists() {
-		details["Destination Account"] = tran.destination.name
+		details["toAccount"] = tran.Destination.Name
 	}
 
-	details["Memo"] = tran.memo
+	details["memo"] = tran.Memo
 
-	return details
+	return json.Marshal(details)
 }
