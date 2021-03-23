@@ -7,10 +7,19 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"samvasta.com/bujit/session"
 )
 
 func TestAccountStateMarshal(t *testing.T) {
-	as := AccountState{123, time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC), MakeMoney(432.12), nil}
+	session := session.InMemorySession(MigrateSchema)
+	session.CurrencyPrefix = ""
+	session.CurrencySuffix = "USD"
+	as := AccountState{
+		123,
+		time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC),
+		MakeMoney(432.12),
+		nil, nil,
+		&session}
 
 	jsonBytes, error := json.Marshal(as)
 	jsonStr := string(jsonBytes)
@@ -21,7 +30,7 @@ func TestAccountStateMarshal(t *testing.T) {
 
 	expected := `{
 		"id":123,
-		"balance":"$432.12",
+		"balance":"432.12 USD",
 		"timestamp":"2020-01-01T00:00:00Z"
 	}`
 
@@ -29,8 +38,24 @@ func TestAccountStateMarshal(t *testing.T) {
 }
 
 func TestAccountMarshal(t *testing.T) {
-	state := AccountState{123, time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC), MakeMoney(123.45), nil}
-	account := Account{123, "Account Name", false, "description", time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC), &state}
+	session := session.InMemorySession(MigrateSchema)
+	session.CurrencyPrefix = ""
+	session.CurrencySuffix = "USD"
+	state := AccountState{
+		123,
+		time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC),
+		MakeMoney(123.45),
+		nil, nil,
+		&session}
+	account := Account{
+		123,
+		time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC),
+		"Account Name",
+		"description",
+		false,
+		&state.ID,
+		state,
+		&session}
 
 	jsonBytes, error := json.Marshal(account)
 	jsonStr := string(jsonBytes)
@@ -41,12 +66,12 @@ func TestAccountMarshal(t *testing.T) {
 
 	expected := `{
 		"id":123,
-		"createdOn":"2020-01-01T00:00:00Z",
-		"currentBalance":"$123.45",
+		"createdAt":"2020-01-01T00:00:00Z",
+		"currentBalance":"123.45 USD",
 		"description":"description",
 		"name":"Account Name",
 		"status":"closed",
-		"updatedOn":"2021-01-01T00:00:00Z"
+		"updatedAt":"2021-01-01T00:00:00Z"
 		}`
 
 	assert.JSONEq(t, expected, jsonStr)
@@ -59,10 +84,52 @@ func TestAccountMarshal(t *testing.T) {
 }
 
 func TestTransactionMarshal(t *testing.T) {
-	fromAccount := Account{123, "Source", false, "description", time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC), nil}
-	toAccount := Account{123, "Sink", false, "description", time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC), nil}
+	session := session.InMemorySession(MigrateSchema)
+	session.CurrencyPrefix = ""
+	session.CurrencySuffix = "USD"
 
-	transaction := Transaction{123, time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC), MakeMoney(123.45), &fromAccount, &toAccount, "Memo"}
+	fromAccountState := AccountState{
+		1,
+		time.Now(),
+		MakeMoney(12.34),
+		nil, nil,
+		&session}
+	fromAccount := Account{
+		123,
+		time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC),
+		"Source",
+		"description",
+		false,
+		&fromAccountState.ID,
+		fromAccountState,
+		&session}
+
+	toAccountState := AccountState{
+		2,
+		time.Now(),
+		MakeMoney(12.34),
+		nil, nil,
+		&session}
+	toAccount := Account{
+		123,
+		time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC),
+		"Sink",
+		"description",
+		false,
+		&toAccountState.ID,
+		toAccountState,
+		&session}
+
+	transaction := Transaction{
+		123,
+		time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC),
+		MakeMoney(123.45),
+		&fromAccount.ID,
+		&fromAccount,
+		&toAccount.ID,
+		&toAccount,
+		"Memo",
+		&session}
 
 	jsonBytes, error := json.Marshal(transaction)
 	jsonStr := string(jsonBytes)
@@ -74,7 +141,7 @@ func TestTransactionMarshal(t *testing.T) {
 	expected := `{
 		"id":123,
 		"memo":"Memo",
-		"amount":"$123.45",
+		"amount":"123.45 USD",
 		"fromAccount":"Source",
 		"toAccount":"Sink",
 		"timestamp":"2020-01-01T00:00:00Z"

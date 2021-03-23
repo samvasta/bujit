@@ -1,7 +1,6 @@
 package parse
 
 import (
-	"fmt"
 	"regexp"
 	"strings"
 	"testing"
@@ -53,20 +52,6 @@ func TestDisplayNames(t *testing.T) {
 	assert.Contains(t, displayNames, "three")
 }
 
-func TestCurrencySymbolsWorkInRegex(t *testing.T) {
-	testCase := func(symbol string) func(t *testing.T) {
-		return func(t *testing.T) {
-			result := regexp.MustCompile(fmt.Sprintf("[%s]", CurrencySymbols)).MatchString(symbol)
-			assert.Truef(t, result, "%s was not recognized as a currency symbol, but should have been", symbol)
-		}
-	}
-
-	for _, s := range CurrencySymbols {
-		currencySymbol := string(s)
-		t.Run(currencySymbol, testCase(currencySymbol))
-	}
-}
-
 func TestIntegerPattern(t *testing.T) {
 	testCase := func(input string, isValid bool) func(t *testing.T) {
 		return func(t *testing.T) {
@@ -84,12 +69,56 @@ func TestIntegerPattern(t *testing.T) {
 	t.Run("positive decimal", testCase("12.34", false))
 	t.Run("negative decimal", testCase("-12.34", false))
 
-	t.Run("positive int with currency", testCase("$1234", true))
-	t.Run("negative int with currency", testCase("$-1234", true))
-	t.Run("positive decimal with currency", testCase("$12.34", false))
-	t.Run("negative decimal with currency", testCase("$-12.34", false))
+	t.Run("positive int with currency prefix", testCase("$1234", true))
+	t.Run("negative int with currency prefix", testCase("$-1234", true))
+	t.Run("positive decimal with currency prefix", testCase("$12.34", false))
+	t.Run("negative decimal with currency prefix", testCase("$-12.34", false))
+
+	t.Run("positive int with currency suffix", testCase("1234 USD", true))
+	t.Run("negative int with currency suffix", testCase("-1234CAD", true))
+	t.Run("positive decimal with currency suffix", testCase("12.34 USD", false))
+	t.Run("negative decimal with currency suffix", testCase("-12.34USD", false))
+
+	t.Run("positive int with currency prefix+suffix", testCase("$1234 USD", true))
+	t.Run("negative int with currency prefix+suffix", testCase("$-1234CAD", true))
+	t.Run("positive decimal with currency prefix+suffix", testCase("$12.34 USD", false))
+	t.Run("negative decimal with currency prefix+suffix", testCase("$-12.34USD", false))
 
 	t.Run("words", testCase("not an int", false))
+}
+func TestDecimalPattern(t *testing.T) {
+	testCase := func(input string, isValid bool) func(t *testing.T) {
+		return func(t *testing.T) {
+			result := DecimalPattern.FindString(input)
+			if isValid {
+				assert.Equal(t, result, input)
+			} else {
+				assert.NotEqual(t, result, input)
+			}
+		}
+	}
+
+	t.Run("positive int", testCase("1234", true))
+	t.Run("negative int", testCase("-1234", true))
+	t.Run("positive decimal", testCase("12.34", true))
+	t.Run("negative decimal", testCase("-12.34", true))
+
+	t.Run("positive int with currency prefix", testCase("$1234", true))
+	t.Run("negative int with currency prefix", testCase("$-1234", true))
+	t.Run("positive decimal with currency prefix", testCase("$12.34", true))
+	t.Run("negative decimal with currency prefix", testCase("$-12.34", true))
+
+	t.Run("positive int with currency suffix", testCase("1234 USD", true))
+	t.Run("negative int with currency suffix", testCase("-1234CAD", true))
+	t.Run("positive decimal with currency suffix", testCase("12.34 USD", true))
+	t.Run("negative decimal with currency suffix", testCase("-12.34USD", true))
+
+	t.Run("positive int with currency prefix+suffix", testCase("$1234 USD", true))
+	t.Run("negative int with currency prefix+suffix", testCase("$-1234CAD", true))
+	t.Run("positive decimal with currency prefix+suffix", testCase("$12.34 USD", true))
+	t.Run("negative decimal with currency prefix+suffix", testCase("$-12.34USD", true))
+
+	t.Run("words", testCase("not a number", false))
 }
 
 func TestTokenMatches(t *testing.T) {

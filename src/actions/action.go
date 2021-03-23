@@ -38,12 +38,12 @@ const (
 )
 
 type Consequence struct {
-	consequenceType ConsequenceType
-	object          json.Marshaler
+	ConsequenceType ConsequenceType
+	Object          json.Marshaler
 }
 
 type ActionResult struct {
-	output string
+	Output string
 }
 
 type Actioner interface {

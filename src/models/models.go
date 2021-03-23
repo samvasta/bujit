@@ -3,22 +3,86 @@ package models
 import (
 	"encoding/json"
 	"time"
+
+	"gorm.io/gorm"
+	"samvasta.com/bujit/session"
 )
 
+type Category struct {
+	ID              uint `gorm:"primaryKey"`
+	CreatedAt       time.Time
+	UpdatedAt       time.Time
+	Name            string
+	Description     string
+	SuperCategoryID *uint
+	SubCategories   []Category       `gorm:"foreignkey:SuperCategoryID"`
+	Accounts        []Account        `gorm:"foreignkey:ID"`
+	Session         *session.Session `gorm:"-"` // Ignored by ORM
+}
+
+func (cat Category) CurrentBalance() Money {
+	var total int64 = 0
+	for _, account := range cat.Accounts {
+		total += account.Balance().Value()
+	}
+	for _, subCat := range cat.SubCategories {
+		total += subCat.CurrentBalance().Value()
+	}
+	return Money(total)
+}
+
+func (cat Category) MarshalJSON() ([]byte, error) {
+	details := make(map[string]interface{})
+	details["id"] = cat.ID
+	details["name"] = cat.Name
+	details["description"] = cat.Description
+	details["createdAt"] = cat.CreatedAt
+	details["updatedAt"] = cat.UpdatedAt
+	details["currentBalance"] = cat.CurrentBalance()
+
+	subCategoryIds := []uint{}
+	for _, subCat := range cat.SubCategories {
+		subCategoryIds = append(subCategoryIds, subCat.ID)
+	}
+	details["subCategories"] = subCategoryIds
+
+	accountIds := []uint{}
+	for _, account := range cat.Accounts {
+		accountIds = append(accountIds, account.ID)
+	}
+	details["accounts"] = accountIds
+
+	return json.Marshal(details)
+}
+
 type AccountState struct {
-	Id        int64         `json:"id"`
-	Timestamp time.Time     `json:"timestamp"`
-	Balance   Money         `json:"balance"`
-	prevState *AccountState `json:"-"`
+	ID          uint `gorm:"primaryKey"`
+	CreatedAt   time.Time
+	Balance     Money
+	PrevStateID *uint
+	PrevState   *AccountState
+	Session     *session.Session `gorm:"-"` // Ignored by ORM
+}
+
+func (as AccountState) MarshalJSON() ([]byte, error) {
+	details := make(map[string]interface{})
+	details["id"] = as.ID
+
+	details["timestamp"] = as.CreatedAt
+	details["balance"] = as.Balance.String(as.Session)
+
+	return json.Marshal(details)
 }
 
 type Account struct {
-	Id           int64
-	Name         string
-	IsActive     bool
-	Description  string
-	CreatedOn    time.Time
-	CurrentState *AccountState
+	ID             uint `gorm:"primaryKey"`
+	CreatedAt      time.Time
+	Name           string
+	Description    string
+	IsActive       bool
+	CurrentStateID *uint
+	CurrentState   AccountState     `gorm:"foreignkey:CurrentStateID"`
+	Session        *session.Session `gorm:"-"` // Ignored by ORM
 }
 
 func (account *Account) Balance() Money {
@@ -27,7 +91,7 @@ func (account *Account) Balance() Money {
 
 func (account Account) MarshalJSON() ([]byte, error) {
 	details := make(map[string]interface{})
-	details["id"] = account.Id
+	details["id"] = account.ID
 	details["name"] = account.Name
 
 	if account.IsActive {
@@ -37,20 +101,23 @@ func (account Account) MarshalJSON() ([]byte, error) {
 	}
 
 	details["description"] = account.Description
-	details["createdOn"] = account.CreatedOn
-	details["updatedOn"] = account.CurrentState.Timestamp
-	details["currentBalance"] = account.Balance().String()
+	details["createdAt"] = account.CreatedAt
+	details["updatedAt"] = account.CurrentState.CreatedAt
+	details["currentBalance"] = account.Balance().String(account.Session)
 
 	return json.Marshal(details)
 }
 
 type Transaction struct {
-	Id          int64
-	Timestamp   time.Time
-	Change      Money
-	Source      *Account
-	Destination *Account
-	Memo        string
+	ID            uint `gorm:"primaryKey"`
+	CreatedAt     time.Time
+	Change        Money
+	SourceID      *uint
+	Source        *Account `gorm:"foreignkey:SourceID"`
+	DestinationID *uint
+	Destination   *Account `gorm:"foreignkey:DestinationID"`
+	Memo          string
+	Session       *session.Session `gorm:"-"` // Ignored by ORM
 }
 
 func (tran *Transaction) SourceExists() bool {
@@ -62,9 +129,9 @@ func (tran *Transaction) DestinationExists() bool {
 
 func (tran Transaction) MarshalJSON() ([]byte, error) {
 	details := make(map[string]interface{})
-	details["id"] = tran.Id
-	details["timestamp"] = tran.Timestamp
-	details["amount"] = tran.Change.String()
+	details["id"] = tran.ID
+	details["timestamp"] = tran.CreatedAt
+	details["amount"] = tran.Change.String(tran.Session)
 
 	if tran.SourceExists() {
 		details["fromAccount"] = tran.Source.Name
@@ -76,4 +143,11 @@ func (tran Transaction) MarshalJSON() ([]byte, error) {
 	details["memo"] = tran.Memo
 
 	return json.Marshal(details)
+}
+
+func MigrateSchema(db *gorm.DB) {
+	db.AutoMigrate(&Category{})
+	db.AutoMigrate(&AccountState{})
+	db.AutoMigrate(&Account{})
+	db.AutoMigrate(&Transaction{})
 }

@@ -7,10 +7,8 @@ import (
 	"strings"
 )
 
-const CurrencySymbols string = "$€£¥₿ɱŁ"
-
-var IntegerPattern *regexp.Regexp = regexp.MustCompile(fmt.Sprintf(`[%s]?-?\d+`, CurrencySymbols))
-var DecimalPattern *regexp.Regexp = regexp.MustCompile(fmt.Sprintf(`[%s]?-?\d+(\.\d{1,2})?`, CurrencySymbols))
+var IntegerPattern *regexp.Regexp = regexp.MustCompile(`[^\w|\d|\.|\,|'|"|_|-]?-?\d+(\W?[A-Z]{3})?`)
+var DecimalPattern *regexp.Regexp = regexp.MustCompile(`[^\w|\d|\.|\,|'|"|_|-]?-?\d+(\.\d{1,2})?(\W?[A-Z]{3})?`)
 
 var ItemNamePattern *regexp.Regexp = regexp.MustCompile(`[a-zA-Z][a-zA-Z_-]+`)
 
