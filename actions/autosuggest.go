@@ -9,7 +9,7 @@ type AutoSuggestAction struct {
 	nextArgs    []string
 }
 
-func (autoSuggestAction AutoSuggestAction) execute() (result ActionResult, consequences []*Consequence) {
+func (autoSuggestAction AutoSuggestAction) Execute() (result ActionResult, consequences []*Consequence) {
 
 	var sb strings.Builder
 

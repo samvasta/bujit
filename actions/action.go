@@ -47,5 +47,5 @@ type ActionResult struct {
 }
 
 type Actioner interface {
-	execute() (ActionResult, []*Consequence)
+	Execute() (ActionResult, []*Consequence)
 }

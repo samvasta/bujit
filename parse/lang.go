@@ -9,15 +9,19 @@ type ParseContext struct {
 	data              map[string]interface{}
 }
 
+func (ctx *ParseContext) MoveToNextToken() {
+	ctx.currentTokenIndex++
+}
+
 func EmptyParseContext(tokens []string) *ParseContext {
 	return &ParseContext{tokens, 1, true, make(map[string]interface{})}
 }
 
-func (ctx *ParseContext) NextToken() string {
+func (ctx *ParseContext) NextToken() (nextToken string, hasNext bool) {
 	if ctx.currentTokenIndex >= len(ctx.tokens) {
-		return ""
+		return "", false
 	}
-	return ctx.tokens[ctx.currentTokenIndex]
+	return ctx.tokens[ctx.currentTokenIndex], true
 }
 
 const (
@@ -121,7 +125,7 @@ func ParseExpression(input string) actions.Actioner {
 	case CONFIGURE:
 		return nil
 	case HELP:
-		return ParseHelpRoot(EmptyParseContext(tokens))
+		return ParseHelpRoot(&HelpContext{EmptyParseContext(tokens), false})
 	case EXIT:
 		return nil
 	case VERSION:

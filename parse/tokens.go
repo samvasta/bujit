@@ -57,6 +57,17 @@ func MakeLiteralToken(id int, literalOptions ...string) *TokenPattern {
 	return &TokenPattern{id, literalOptions[0], patterns}
 }
 
+func MakeFlagToken(id int, shortName, longName string) *TokenPattern {
+	displayName := fmt.Sprintf("--%s", longName)
+	fmt.Println(displayName)
+	patterns := []*regexp.Regexp{
+		regexp.MustCompile(regexp.QuoteMeta(fmt.Sprintf("-%s", shortName))),
+		regexp.MustCompile(regexp.QuoteMeta(displayName)),
+	}
+
+	return &TokenPattern{id, displayName, patterns}
+}
+
 var ArgumentTokenPattern *regexp.Regexp = regexp.MustCompile("[a-zA-Z0-9]+")
 
 func MakeArgToken(id int, displayName string, pattern *regexp.Regexp) *TokenPattern {
@@ -116,8 +127,6 @@ func PossibleMatches(test string, possibleTokens []*TokenPattern) (exactMatch *T
 	for i, tok := range possibleTokens {
 		for _, pattern := range tok.Patterns {
 			prefix, _ := pattern.LiteralPrefix()
-
-			fmt.Printf(prefix)
 
 			if len(prefix) > 0 {
 				lenOfMatch := LengthOfMatch(test, prefix)

@@ -4,10 +4,13 @@
 			"path": "."
 		}
 	],
-    "settings": {
-        "cSpell.words": [
-            "bujit",
-            "gorm"
-        ]
-    }
+	"settings": {
+		"cSpell.words": [
+			"Actioner",
+			"bujit",
+			"stretchr",
+			"unmarshaled",
+			"gorm"
+		]
+	}
 }
