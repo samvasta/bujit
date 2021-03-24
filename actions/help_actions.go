@@ -7,7 +7,7 @@ import (
 )
 
 type HelpAction struct {
-	HelpItems []output.Helper
+	HelpItems []*output.Helper
 }
 
 func (helpAction *HelpAction) Execute() (ActionResult, []*Consequence) {
