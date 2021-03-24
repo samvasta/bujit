@@ -35,7 +35,7 @@ func ParseHelpRoot(context *HelpContext) actions.Actioner {
 			Header("Bujit General Help").
 			HorizontalRule("═").
 			Paragraph("Available Commands").
-			UnorderedList(DisplayNames(ActionTokens)).
+			UnorderedList(DisplayNames(ActionTokens), output.NormalBulletChar).
 			ToSlice()
 
 		return &actions.HelpAction{HelpItems: helpItems}

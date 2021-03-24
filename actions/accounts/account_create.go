@@ -14,7 +14,7 @@ type CreateAccountAction struct {
 	Session         *session.Session
 }
 
-func (action *CreateAccountAction) execute() (actions.ActionResult, []*actions.Consequence) {
+func (action *CreateAccountAction) Execute() (actions.ActionResult, []*actions.Consequence) {
 
 	// Upsert category
 	var category models.Category

@@ -16,7 +16,7 @@ func TestAccountStateMarshal(t *testing.T) {
 	session.CurrencySuffix = "USD"
 	as := AccountState{
 		123,
-		time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC),
+		time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC).Unix(),
 		MakeMoney(432.12),
 		nil, nil,
 		&session}
@@ -43,13 +43,13 @@ func TestAccountMarshal(t *testing.T) {
 	session.CurrencySuffix = "USD"
 	state := AccountState{
 		123,
-		time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC),
+		time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC).Unix(),
 		MakeMoney(123.45),
 		nil, nil,
 		&session}
 	account := Account{
 		123,
-		time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC),
+		time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC).Unix(),
 		"Account Name",
 		"description",
 		false,
@@ -90,13 +90,13 @@ func TestTransactionMarshal(t *testing.T) {
 
 	fromAccountState := AccountState{
 		1,
-		time.Now(),
+		time.Now().Unix(),
 		MakeMoney(12.34),
 		nil, nil,
 		&session}
 	fromAccount := Account{
 		123,
-		time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC),
+		time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC).Unix(),
 		"Source",
 		"description",
 		false,
@@ -106,13 +106,13 @@ func TestTransactionMarshal(t *testing.T) {
 
 	toAccountState := AccountState{
 		2,
-		time.Now(),
+		time.Now().Unix(),
 		MakeMoney(12.34),
 		nil, nil,
 		&session}
 	toAccount := Account{
 		123,
-		time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC),
+		time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC).Unix(),
 		"Sink",
 		"description",
 		false,
@@ -122,7 +122,7 @@ func TestTransactionMarshal(t *testing.T) {
 
 	transaction := Transaction{
 		123,
-		time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC),
+		time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC).Unix(),
 		MakeMoney(123.45),
 		&fromAccount.ID,
 		&fromAccount,

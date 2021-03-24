@@ -28,6 +28,14 @@ type TextStyle struct {
 	IsBold      bool      `json:"isBold,omitempty"`
 }
 
+func (ts TextStyle) String() string {
+	b, err := json.Marshal(ts)
+	if err != nil {
+		panic(err)
+	}
+	return string(b)
+}
+
 var DefaultStyle *TextStyle = &TextStyle{Color: Body, IsItalic: false, IsUnderline: false, IsBold: false}
 var HeaderStyle *TextStyle = &TextStyle{Color: Body, IsItalic: false, IsUnderline: false, IsBold: true}
 
@@ -35,6 +43,14 @@ type Text struct {
 	Text   string    `json:"text"`
 	Indent int       `json:"indent"`
 	Style  TextStyle `json:"style"`
+}
+
+func (t Text) String() string {
+	b, err := json.Marshal(t)
+	if err != nil {
+		panic(err)
+	}
+	return string(b)
 }
 
 type FakeText Text // to avoid recursive JSON marshaling
@@ -48,11 +64,21 @@ func (t Text) MarshalJSON() ([]byte, error) {
 	})
 }
 
+var NormalBulletChar string = "•"
+
 type UnorderedList struct {
 	BulletChar string    `json:"bullet"`
 	Indent     int       `json:"indent"`
 	Style      TextStyle `json:"style"`
 	Items      []Text    `json:"items"`
+}
+
+func (ul UnorderedList) String() string {
+	b, err := json.Marshal(ul)
+	if err != nil {
+		panic(err)
+	}
+	return string(b)
 }
 
 type FakeUnorderedList UnorderedList // to avoid recursive JSON marshaling
@@ -83,6 +109,14 @@ type OrderedList struct {
 	Items       []Text      `json:"items"`
 }
 
+func (ol OrderedList) String() string {
+	b, err := json.Marshal(ol)
+	if err != nil {
+		panic(err)
+	}
+	return string(b)
+}
+
 type FakeOrderedList OrderedList // to avoid recursive JSON marshaling
 func (ol OrderedList) MarshalJSON() ([]byte, error) {
 	return json.Marshal(struct {
@@ -97,6 +131,14 @@ func (ol OrderedList) MarshalJSON() ([]byte, error) {
 type HorizontalRule struct {
 	RuleChar string    `json:"ruleChar"`
 	Style    TextStyle `json:"style"`
+}
+
+func (hr HorizontalRule) String() string {
+	b, err := json.Marshal(hr)
+	if err != nil {
+		panic(err)
+	}
+	return string(b)
 }
 
 type FakeHorizontalRule HorizontalRule // to avoid recursive JSON marshaling
@@ -122,22 +164,26 @@ func EmptyOutputGroup() *OutputGroup {
 	return &OutputGroup{currentIndent: 0, styleStack: []TextStyle{*DefaultStyle}}
 }
 
-func (g *OutputGroup) Indent() {
+func (g *OutputGroup) Indent() *OutputGroup {
 	(*g).currentIndent++
+	return g
 }
 
-func (g *OutputGroup) Unindent() {
+func (g *OutputGroup) Unindent() *OutputGroup {
 	(*g).currentIndent--
+	return g
 }
 
-func (g *OutputGroup) PushStyle(style TextStyle) {
+func (g *OutputGroup) PushStyle(style TextStyle) *OutputGroup {
 	g.styleStack = append(g.styleStack, style)
+	return g
 }
 
-func (g *OutputGroup) PopStyle() {
+func (g *OutputGroup) PopStyle() *OutputGroup {
 	if len(g.styleStack) > 0 {
 		g.styleStack = g.styleStack[:len(g.styleStack)-1]
 	}
+	return g
 }
 
 func (g *OutputGroup) CurrentStyle() TextStyle {
@@ -145,41 +191,42 @@ func (g *OutputGroup) CurrentStyle() TextStyle {
 }
 
 func (g *OutputGroup) Header(text string) *OutputGroup {
-	g.items = append(g.items, &Text{Text: text, Indent: g.currentIndent, Style: *HeaderStyle})
+	g.items = append(g.items, Text{Text: text, Indent: g.currentIndent, Style: *HeaderStyle})
 	return g
 }
 func (g *OutputGroup) HorizontalRule(ruleChar string) *OutputGroup {
-	g.items = append(g.items, &HorizontalRule{RuleChar: ruleChar, Style: g.CurrentStyle()})
+	g.items = append(g.items, HorizontalRule{RuleChar: ruleChar, Style: g.CurrentStyle()})
 	return g
 }
 
 func (g *OutputGroup) Paragraph(text string) *OutputGroup {
-	g.items = append(g.items, &Text{Text: text, Indent: g.currentIndent, Style: g.CurrentStyle()}, g.EmptyLine(1))
+	g.items = append(g.items, Text{Text: text, Indent: g.currentIndent, Style: g.CurrentStyle()})
 	return g
 }
 
-func (g *OutputGroup) OrderedList(items []string) *OutputGroup {
+func (g *OutputGroup) OrderedList(items []string, bulletStyle BulletStyle) *OutputGroup {
 	var listItems []Text
 	for _, item := range items {
 		listItems = append(listItems, Text{Text: item, Indent: g.currentIndent, Style: g.CurrentStyle()})
 	}
 
-	g.items = append(g.items, &OrderedList{BulletStyle: Decimal, Items: listItems, Indent: g.currentIndent, Style: g.CurrentStyle()}, g.EmptyLine(1))
+	g.items = append(g.items, OrderedList{BulletStyle: bulletStyle, Items: listItems, Indent: g.currentIndent, Style: g.CurrentStyle()})
 	return g
 }
 
-func (g *OutputGroup) UnorderedList(items []string) *OutputGroup {
+func (g *OutputGroup) UnorderedList(items []string, bulletChar string) *OutputGroup {
 	var listItems []Text
 	for _, item := range items {
 		listItems = append(listItems, Text{Text: item, Indent: g.currentIndent, Style: g.CurrentStyle()})
 	}
 
-	g.items = append(g.items, &UnorderedList{BulletChar: "•", Items: listItems, Indent: g.currentIndent, Style: g.CurrentStyle()}, g.EmptyLine(1))
+	g.items = append(g.items, UnorderedList{BulletChar: bulletChar, Items: listItems, Indent: g.currentIndent, Style: g.CurrentStyle()})
 	return g
 }
 
-func (g *OutputGroup) EmptyLine(numLines int) Text {
-	return Text{Text: strings.Repeat("\n", numLines), Indent: g.currentIndent, Style: g.CurrentStyle()}
+func (g *OutputGroup) EmptyLines(numLines int) *OutputGroup {
+	g.items = append(g.items, Text{Text: strings.Repeat("\n", numLines), Indent: g.currentIndent, Style: g.CurrentStyle()})
+	return g
 }
 
 func (g *OutputGroup) ToSlice() []Helper {
