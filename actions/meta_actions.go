@@ -9,13 +9,13 @@ import (
 type ExitAction struct{}
 
 func (exitAction *ExitAction) execute() (ActionResult, []*Consequence) {
-	return ActionResult{"goodbye"}, []*Consequence{}
+	return ActionResult{"goodbye", []string{}}, []*Consequence{}
 }
 
 type VersionAction struct{}
 
 func (versionAction *VersionAction) execute() (ActionResult, []*Consequence) {
-	return ActionResult{config.Version()}, []*Consequence{}
+	return ActionResult{config.Version(), []string{}}, []*Consequence{}
 }
 
 type ConfigureAction struct {
@@ -26,5 +26,5 @@ type ConfigureAction struct {
 func (configureAction *ConfigureAction) execute() (ActionResult, []*Consequence) {
 	configureAction.configureFunc(configureAction.value)
 
-	return ActionResult{fmt.Sprintf("Set to %v", configureAction.value)}, []*Consequence{}
+	return ActionResult{fmt.Sprintf("Set to %v", configureAction.value), []string{}}, []*Consequence{}
 }

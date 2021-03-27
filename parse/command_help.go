@@ -1,32 +1,43 @@
 package parse
 
 import (
+	"fmt"
+
 	"samvasta.com/bujit/actions"
 	"samvasta.com/bujit/models/output"
 )
 
 type HelpContext struct {
-	parseContext *ParseContext
-	verbose      bool
+	ParseContext
+	verbose bool
 }
 
 var VerboseToken *TokenPattern = MakeFlagToken(1, "v", "verbose")
+var parseRootNextTokens = []*TokenPattern{VerboseToken}
 
 func ParseHelpRoot(context *HelpContext) actions.Actioner {
-	token, isValid := context.parseContext.NextToken()
+	nextToken, hasNext := context.NextToken()
+	fmt.Println("next: " + nextToken)
 
-	if isValid {
-		exact, _ := PossibleMatches(token, []*TokenPattern{VerboseToken})
+	if hasNext {
+		exact, possible := PossibleMatches(nextToken, parseRootNextTokens)
+
+		if exact == nil {
+			fmt.Println("exact is nil")
+			suggestions := DisplayNames(possible)
+			fmt.Printf("suggestions1 %s\n", suggestions)
+			return actions.MakeAutoSuggestAction(false, suggestions)
+		}
 
 		switch exact.Id {
 		case VerboseToken.Id:
 			context.verbose = true
-			context.parseContext.MoveToNextToken()
+			context.MoveToNextToken()
 			return ParseHelpRoot(context)
 		default:
-			return actions.MakeAutoSuggestAction(false, []string{VerboseToken.DisplayName})
+			return actions.MakeAutoSuggestAction(false, DisplayNames(possible))
 		}
-	} else if VerboseToken.Matches(token) {
+	} else if VerboseToken.Matches(nextToken) {
 		// return verbose help
 		return &actions.HelpAction{HelpItems: []output.Helper{}}
 	} else {

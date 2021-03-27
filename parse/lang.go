@@ -1,20 +1,25 @@
 package parse
 
-import "samvasta.com/bujit/actions"
+import (
+	"samvasta.com/bujit/actions"
+	actions_accounts "samvasta.com/bujit/actions/accounts"
+	"samvasta.com/bujit/session"
+)
 
 type ParseContext struct {
 	tokens            []string
 	currentTokenIndex int
 	isValid           bool
 	data              map[string]interface{}
+	session           session.Session
 }
 
 func (ctx *ParseContext) MoveToNextToken() {
 	ctx.currentTokenIndex++
 }
 
-func EmptyParseContext(tokens []string) *ParseContext {
-	return &ParseContext{tokens, 1, true, make(map[string]interface{})}
+func EmptyParseContext(tokens []string, session session.Session) ParseContext {
+	return ParseContext{tokens, 1, true, make(map[string]interface{}), session}
 }
 
 func (ctx *ParseContext) NextToken() (nextToken string, hasNext bool) {
@@ -48,6 +53,7 @@ const (
 	BY
 
 	// Models
+	CATEGORY
 	ACCOUNT
 	ACCOUNT_STATE
 	TRANSACTION
@@ -77,6 +83,7 @@ var allTokens map[int]*TokenPattern = map[int]*TokenPattern{
 	BY:     MakeLiteralToken(BY, "by"),
 
 	// Nouns
+	CATEGORY:      MakeLiteralToken(CATEGORY, "category", "group"),
 	ACCOUNT:       MakeLiteralToken(ACCOUNT, "account", "acct"),
 	ACCOUNT_STATE: MakeLiteralToken(ACCOUNT_STATE, "account_state", "acct_state"),
 	TRANSACTION:   MakeLiteralToken(TRANSACTION, "transaction", "tran"),
@@ -96,7 +103,14 @@ var ActionTokens = []*TokenPattern{
 	allTokens[VERSION],
 }
 
-func ParseExpression(input string) actions.Actioner {
+var ModelTokens = []*TokenPattern{
+	allTokens[CATEGORY],
+	allTokens[ACCOUNT],
+	allTokens[ACCOUNT_STATE],
+	allTokens[TRANSACTION],
+}
+
+func ParseExpression(input string, session session.Session) actions.Actioner {
 	tokens := Tokenize(input)
 
 	actionTok := tokens[0]
@@ -125,7 +139,7 @@ func ParseExpression(input string) actions.Actioner {
 	case CONFIGURE:
 		return nil
 	case HELP:
-		return ParseHelpRoot(&HelpContext{EmptyParseContext(tokens), false})
+		return ParseHelpRoot(&HelpContext{ParseContext: EmptyParseContext(tokens, session), verbose: false})
 	case EXIT:
 		return nil
 	case VERSION:
@@ -133,4 +147,32 @@ func ParseExpression(input string) actions.Actioner {
 	default:
 		return nil
 	}
+}
+
+func ParseNew(context *ParseContext) actions.Actioner {
+	nextToken, hasNext := context.NextToken()
+
+	if hasNext {
+		exact, _ := PossibleMatches(nextToken, ModelTokens)
+
+		switch exact.Id {
+		case CATEGORY:
+			context.MoveToNextToken()
+			return nil
+		case ACCOUNT:
+			context.MoveToNextToken()
+			return ParseNewAccount(
+				&NewAccountContext{
+					ParseContext: *context,
+					action:       actions_accounts.CreateAccountAction{Session: &context.session}})
+		case ACCOUNT_STATE:
+			context.MoveToNextToken()
+			return nil
+		case TRANSACTION:
+			context.MoveToNextToken()
+			return nil
+		}
+	}
+
+	return actions.MakeAutoSuggestAction(false, DisplayNames(ModelTokens))
 }

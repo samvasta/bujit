@@ -38,7 +38,7 @@ func (cat Category) MarshalJSON() ([]byte, error) {
 	details["description"] = cat.Description
 	details["createdAt"] = time.Unix(cat.CreatedAt, 0).UTC()
 	details["updatedAt"] = time.Unix(cat.UpdatedAt, 0).UTC()
-	details["currentBalance"] = cat.CurrentBalance()
+	details["currentBalance"] = cat.CurrentBalance().String(cat.Session)
 
 	subCategoryIds := []uint{}
 	for _, subCat := range cat.SubCategories {

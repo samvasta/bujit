@@ -43,7 +43,8 @@ type Consequence struct {
 }
 
 type ActionResult struct {
-	Output string
+	Output      string
+	Suggestions []string
 }
 
 type Actioner interface {

@@ -2,15 +2,19 @@ package parse
 
 import (
 	"encoding/json"
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"gorm.io/gorm"
+	"samvasta.com/bujit/session"
 )
 
 func TestHelpCommand(t *testing.T) {
+	session := session.InMemorySession(func(d *gorm.DB) {})
 	input := "help"
 
-	action := ParseExpression(input)
+	action := ParseExpression(input, session)
 
 	result, consequences := action.Execute()
 
@@ -30,9 +34,10 @@ func TestHelpCommand(t *testing.T) {
 }
 
 func TestHelpVerboseCommand(t *testing.T) {
+	session := session.InMemorySession(func(d *gorm.DB) {})
 	input := "help"
 
-	action := ParseExpression(input)
+	action := ParseExpression(input, session)
 
 	result, consequences := action.Execute()
 
@@ -49,4 +54,21 @@ func TestHelpVerboseCommand(t *testing.T) {
 		help := data["data"]
 		assert.NotNil(t, help)
 	}
+}
+
+func TestHelpPartialVerboseCommand(t *testing.T) {
+	session := session.InMemorySession(func(d *gorm.DB) {})
+	input := "help --ver"
+
+	action := ParseExpression(input, session)
+
+	result, consequences := action.Execute()
+
+	fmt.Println(result.Suggestions)
+
+	assert.Len(t, consequences, 0)
+	assert.Equal(t, "", result.Output)
+
+	assert.Len(t, result.Suggestions, 1)
+	assert.Contains(t, result.Suggestions, "--verbose")
 }

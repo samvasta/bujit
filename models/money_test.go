@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"samvasta.com/bujit/session"
 )
 
 func TestCents(t *testing.T) {
@@ -36,4 +37,22 @@ func TestValue(t *testing.T) {
 	var m Money = -123
 
 	assert.Equal(t, int64(-123), m.Value())
+}
+
+func TestString(t *testing.T) {
+	session := session.InMemorySession(MigrateSchema)
+	session.CurrencyPrefix = "$"
+	session.CurrencySuffix = "USD"
+
+	m := MakeMoney(123.45)
+
+	mStr := m.String(&session)
+
+	assert.Equal(t, "$123.45 USD", mStr)
+
+	negative := MakeMoney(-123.45)
+
+	negativeStr := negative.String(&session)
+
+	assert.Equal(t, "($123.45) USD", negativeStr)
 }

@@ -59,7 +59,6 @@ func MakeLiteralToken(id int, literalOptions ...string) *TokenPattern {
 
 func MakeFlagToken(id int, shortName, longName string) *TokenPattern {
 	displayName := fmt.Sprintf("--%s", longName)
-	fmt.Println(displayName)
 	patterns := []*regexp.Regexp{
 		regexp.MustCompile(regexp.QuoteMeta(fmt.Sprintf("-%s", shortName))),
 		regexp.MustCompile(regexp.QuoteMeta(displayName)),
@@ -83,6 +82,23 @@ func MakeArgToken(id int, displayName string, pattern *regexp.Regexp) *TokenPatt
 	sb.WriteRune('>')
 
 	return &TokenPattern{id, sb.String(), []*regexp.Regexp{pattern}}
+}
+
+func MakeOptionalArgToken(id int, shortName, longName, patternName string, pattern *regexp.Regexp) *TokenPattern {
+	patterns := []*regexp.Regexp{
+		regexp.MustCompile(fmt.Sprintf("-%s=(%s)", shortName, pattern.String())),
+		regexp.MustCompile(fmt.Sprintf("--%s=(%s)", longName, pattern.String())),
+	}
+	return &TokenPattern{id, fmt.Sprintf("--%s=<%s>", longName, strings.ToUpper(patternName)), patterns}
+
+}
+
+func ExtractArgValue(token string) string {
+	idx := strings.Index(token, "=")
+	if idx < 0 {
+		return ""
+	}
+	return token[idx+1:]
 }
 
 var TokenizePattern = regexp.MustCompile(`[^\s"']+|"([^"]*)"|'([^']*)'`)
@@ -125,16 +141,18 @@ func PossibleMatches(test string, possibleTokens []*TokenPattern) (exactMatch *T
 
 	//Remove bad tokens & store match lengths for sorting
 	for i, tok := range possibleTokens {
+		isTokenInPossible := false
 		for _, pattern := range tok.Patterns {
 			prefix, _ := pattern.LiteralPrefix()
 
 			if len(prefix) > 0 {
 				lenOfMatch := LengthOfMatch(test, prefix)
 				matchLens[i] = lenOfMatch
-				if lenOfMatch > 0 {
+				if !isTokenInPossible && lenOfMatch > 0 {
 					possibleMatches = append(possibleMatches, tok)
+					isTokenInPossible = true
 				}
-				if lenOfMatch == len(test) {
+				if lenOfMatch == len(test) && len(test) == len(prefix) {
 					exactMatch = tok
 				}
 			}

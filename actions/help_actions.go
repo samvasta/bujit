@@ -13,5 +13,5 @@ type HelpAction struct {
 func (helpAction *HelpAction) Execute() (ActionResult, []*Consequence) {
 	jsonHelpItems, _ := json.Marshal(helpAction.HelpItems)
 
-	return ActionResult{string(jsonHelpItems)}, []*Consequence{}
+	return ActionResult{Output: string(jsonHelpItems), Suggestions: []string{}}, []*Consequence{}
 }

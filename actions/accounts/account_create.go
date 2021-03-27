@@ -14,6 +14,10 @@ type CreateAccountAction struct {
 	Session         *session.Session
 }
 
+func (action CreateAccountAction) IsValid() bool {
+	return action.Name != "" && action.Session != nil
+}
+
 func (action *CreateAccountAction) Execute() (actions.ActionResult, []*actions.Consequence) {
 
 	// Upsert category
@@ -45,7 +49,7 @@ func (action *CreateAccountAction) Execute() (actions.ActionResult, []*actions.C
 	} else {
 		categoryConsequenceType = actions.UPDATE
 	}
-	return actions.ActionResult{Output: ""},
+	return actions.ActionResult{Output: "", Suggestions: []string{}},
 		[]*actions.Consequence{
 			{ConsequenceType: actions.CREATE, Object: account},
 			{ConsequenceType: categoryConsequenceType, Object: category},

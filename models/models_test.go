@@ -10,6 +10,95 @@ import (
 	"samvasta.com/bujit/session"
 )
 
+func TestCategoryMarshal(t *testing.T) {
+	session := session.InMemorySession(MigrateSchema)
+	session.CurrencyPrefix = ""
+	session.CurrencySuffix = "USD"
+
+	categoryId := uint(1)
+	parentId := uint(2)
+
+	state1 := AccountState{
+		123,
+		time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC).Unix(),
+		MakeMoney(432.12),
+		nil, nil,
+		&session}
+
+	state2 := AccountState{
+		124,
+		time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC).Unix(),
+		MakeMoney(123.45),
+		nil, nil,
+		&session}
+
+	account := Account{
+		ID:             1,
+		CreatedAt:      time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC).Unix(),
+		Name:           "Account",
+		Description:    "Account Description",
+		IsActive:       true,
+		CurrentStateID: &state1.ID,
+		CurrentState:   state1,
+		Session:        &session,
+	}
+
+	account2 := Account{
+		ID:             2,
+		CreatedAt:      time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC).Unix(),
+		Name:           "Account2",
+		Description:    "Account2 Description",
+		IsActive:       true,
+		CurrentStateID: &state2.ID,
+		CurrentState:   state2,
+		Session:        &session,
+	}
+
+	subCategory := Category{
+		ID:              3,
+		CreatedAt:       time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC).Unix(),
+		UpdatedAt:       time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC).Unix(),
+		Name:            "Test Category",
+		Description:     "Description",
+		SuperCategoryID: &categoryId,
+		SubCategories:   []Category{},
+		Accounts:        []Account{account2}, // Make sure the currentBalance includes the balance of this account
+		Session:         &session,
+	}
+
+	category := Category{
+		ID:              1,
+		CreatedAt:       time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC).Unix(),
+		UpdatedAt:       time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC).Unix(),
+		Name:            "Test Category",
+		Description:     "Description",
+		SuperCategoryID: &parentId,
+		SubCategories:   []Category{subCategory},
+		Accounts:        []Account{account},
+		Session:         &session,
+	}
+
+	jsonBytes, error := json.Marshal(category)
+	jsonStr := string(jsonBytes)
+
+	if error != nil {
+		assert.Fail(t, "%v", error)
+	}
+
+	expected := `{
+		"id": 1,
+		"createdAt": "2020-01-01T00:00:00Z",
+		"updatedAt": "2020-01-01T00:00:00Z",
+		"name": "Test Category",
+		"description": "Description",
+		"accounts": [1],
+		"currentBalance": "555.57 USD",
+		"subCategories": [3]
+	}`
+
+	assert.JSONEq(t, expected, jsonStr)
+}
+
 func TestAccountStateMarshal(t *testing.T) {
 	session := session.InMemorySession(MigrateSchema)
 	session.CurrencyPrefix = ""

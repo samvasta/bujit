@@ -35,7 +35,7 @@ func (m Money) Value() int64 {
 
 func (m Money) String(s *session.Session) string {
 	if m.IsNegative() {
-		return fmt.Sprintf("(%s%s.%d)%s", s.CurrencyPrefix, humanize.Comma(util.AbsI64(m.Dollars())), m.Cents(), s.CurrencySuffixWithSpace())
+		return fmt.Sprintf("(%s%s.%d)%s", s.CurrencyPrefix, humanize.Comma(util.AbsI64(m.Dollars())), util.AbsI64(m.Cents()), s.CurrencySuffixWithSpace())
 	} else {
 		return fmt.Sprintf("%s%s.%d%s", s.CurrencyPrefix, humanize.Comma(m.Dollars()), m.Cents(), s.CurrencySuffixWithSpace())
 	}

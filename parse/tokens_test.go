@@ -278,3 +278,40 @@ func TestPossibleMatches2(t *testing.T) {
 	assert.Contains(t, possibleMatches, tokens[1])
 	assert.NotContains(t, possibleMatches, tokens[3])
 }
+
+func TestPossibleMatchesNoDuplicates(t *testing.T) {
+	tokens := []*TokenPattern{MakeFlagToken(1, "t", "test")}
+
+	exact, possible := PossibleMatches("--te", tokens)
+
+	assert.Nil(t, exact)
+
+	assert.Len(t, possible, 1)
+	assert.Contains(t, possible, tokens[0])
+}
+
+func TestMakeOptionalArgToken(t *testing.T) {
+	token := MakeOptionalArgToken(1, "t", "test", "str", regexp.MustCompile("hardcodedvalue"))
+
+	var patterns []string
+
+	for _, regex := range token.Patterns {
+		patterns = append(patterns, regex.String())
+	}
+
+	assert.Len(t, patterns, 2)
+	assert.Contains(t, patterns, "-t=(hardcodedvalue)")
+	assert.Contains(t, patterns, "--test=(hardcodedvalue)")
+
+	assert.True(t, token.Matches("-t=hardcodedvalue"))
+	assert.True(t, token.Matches("--test=hardcodedvalue"))
+	assert.False(t, token.Matches("-t=notthevalue"))
+}
+
+func TestExtractArgValue(t *testing.T) {
+	value := ExtractArgValue("--test=value")
+	assert.Equal(t, "value", value)
+
+	value = ExtractArgValue("doesn't work")
+	assert.Equal(t, "", value)
+}
