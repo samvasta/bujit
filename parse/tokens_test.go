@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"samvasta.com/bujit/models"
 )
 
 func TestMakeToken(t *testing.T) {
@@ -268,7 +269,7 @@ func TestPossibleMatches2(t *testing.T) {
 		MakeLiteralToken(1, "fun"),
 		MakeLiteralToken(2, "fan"),
 		MakeLiteralToken(3, "fact"),
-		MakeArgToken(4, "Arg", ItemNamePattern),
+		MakeOptionalArgToken(4, "a", "arg", "argument", ItemNamePattern),
 	}
 
 	exactMatch, possibleMatches := PossibleMatches("fact", tokens)
@@ -277,6 +278,16 @@ func TestPossibleMatches2(t *testing.T) {
 	assert.Contains(t, possibleMatches, tokens[0])
 	assert.Contains(t, possibleMatches, tokens[1])
 	assert.NotContains(t, possibleMatches, tokens[3])
+}
+
+func TestPossibleMatches3(t *testing.T) {
+	tokens := []*TokenPattern{
+		MakeOptionalArgToken(1, "a", "arg", "argument", ItemNamePattern),
+	}
+
+	exactMatch, _ := PossibleMatches("--arg=something", tokens)
+
+	assert.Equal(t, tokens[0], exactMatch)
 }
 
 func TestPossibleMatchesNoDuplicates(t *testing.T) {
@@ -314,4 +325,40 @@ func TestExtractArgValue(t *testing.T) {
 
 	value = ExtractArgValue("doesn't work")
 	assert.Equal(t, "", value)
+}
+
+func TestItemNameValue(t *testing.T) {
+
+	testCase := func(input, expected string) func(t *testing.T) {
+		return func(t *testing.T) {
+			result := ItemNameValue(input)
+			assert.Equal(t, expected, result)
+		}
+	}
+
+	t.Run("single word", testCase("test", "test"))
+	t.Run("double quotes", testCase("\"many words\"", "many words"))
+	t.Run("single quotes", testCase("'many words'", "many words"))
+}
+
+func TestMoneyValue(t *testing.T) {
+
+	testCase := func(input string, expected models.Money) func(t *testing.T) {
+		return func(t *testing.T) {
+			result := MoneyValue(input)
+			assert.Equal(t, expected, result)
+		}
+	}
+
+	t.Run("basic number", testCase("123.45", models.MakeMoney(123.45)))
+	t.Run("with currency prefix", testCase("$123.45", models.MakeMoney(123.45)))
+	t.Run("with currency suffix", testCase("123.45 USD", models.MakeMoney(123.45)))
+	t.Run("with currency prefix and suffix", testCase("$123.45 USD", models.MakeMoney(123.45)))
+
+	t.Run("negative", testCase("-123.45", models.MakeMoney(-123.45)))
+	t.Run("negative with currency prefix", testCase("$-123.45", models.MakeMoney(-123.45)))
+	t.Run("negative with currency suffix", testCase("-123.45USD", models.MakeMoney(-123.45)))
+	t.Run("negative with currency prefix and suffix", testCase("$-123.45 USD", models.MakeMoney(-123.45)))
+
+	t.Run("invalid", testCase("notmoney", models.MakeMoney(0)))
 }

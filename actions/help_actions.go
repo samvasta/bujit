@@ -10,8 +10,8 @@ type HelpAction struct {
 	HelpItems []output.Helper
 }
 
-func (helpAction *HelpAction) Execute() (ActionResult, []*Consequence) {
+func (helpAction HelpAction) Execute() (ActionResult, []*Consequence) {
 	jsonHelpItems, _ := json.Marshal(helpAction.HelpItems)
 
-	return ActionResult{Output: string(jsonHelpItems), Suggestions: []string{}}, []*Consequence{}
+	return ActionResult{Output: string(jsonHelpItems), IsSuccessful: true}, []*Consequence{}
 }

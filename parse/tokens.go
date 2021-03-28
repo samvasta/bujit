@@ -4,11 +4,14 @@ import (
 	"fmt"
 	"regexp"
 	"sort"
+	"strconv"
 	"strings"
+
+	"samvasta.com/bujit/models"
 )
 
-var IntegerPattern *regexp.Regexp = regexp.MustCompile(`[^\w|\d|\.|\,|'|"|_|-]?-?\d+(\W?[A-Z]{3})?`)
-var DecimalPattern *regexp.Regexp = regexp.MustCompile(`[^\w|\d|\.|\,|'|"|_|-]?-?\d+(\.\d{1,2})?(\W?[A-Z]{3})?`)
+var IntegerPattern *regexp.Regexp = regexp.MustCompile(`[^\w|\d|\.|\,|'|"|_|-]?(-?\d+)(\W?[A-Z]{3})?`)
+var DecimalPattern *regexp.Regexp = regexp.MustCompile(`[^\w|\d|\.|\,|'|"|_|-]?(-?\d+(\.\d{1,2})?)(\W?[A-Z]{3})?`)
 
 var ItemNamePattern *regexp.Regexp = regexp.MustCompile(`[a-zA-Z][a-zA-Z_-]+`)
 
@@ -134,27 +137,37 @@ func LengthOfMatch(a, b string) int {
 }
 
 func PossibleMatches(test string, possibleTokens []*TokenPattern) (exactMatch *TokenPattern, possibleMatches []*TokenPattern) {
-	exactMatch = nil
 
 	// Copy possible tokens
 	var matchLens map[int]int = make(map[int]int, len(possibleTokens))
 
 	//Remove bad tokens & store match lengths for sorting
 	for i, tok := range possibleTokens {
-		isTokenInPossible := false
+		isTokenAlreadyAdded := false
 		for _, pattern := range tok.Patterns {
 			prefix, _ := pattern.LiteralPrefix()
 
 			if len(prefix) > 0 {
 				lenOfMatch := LengthOfMatch(test, prefix)
 				matchLens[i] = lenOfMatch
-				if !isTokenInPossible && lenOfMatch > 0 {
+				if !isTokenAlreadyAdded && lenOfMatch > 0 {
 					possibleMatches = append(possibleMatches, tok)
-					isTokenInPossible = true
+					isTokenAlreadyAdded = true
 				}
 				if lenOfMatch == len(test) && len(test) == len(prefix) {
+					// The token must be 100% literal and be an exact match of the test str
 					exactMatch = tok
+				} else {
+					submatches := pattern.FindStringSubmatch(test)
+
+					if len(submatches) > 0 && len(submatches[0]) == len(test) {
+						// The token starts with literals and has an expandable section, but still matches the test str completely
+						exactMatch = tok
+					}
 				}
+			} else if pattern.MatchString(test) {
+				matchLens[i] = 0
+				exactMatch = tok
 			}
 		}
 	}
@@ -165,4 +178,20 @@ func PossibleMatches(test string, possibleTokens []*TokenPattern) (exactMatch *T
 	})
 
 	return exactMatch, possibleMatches
+}
+
+func ItemNameValue(tokenStr string) string {
+	return strings.Trim(tokenStr, `'"`)
+}
+
+func MoneyValue(tokenStr string) models.Money {
+	submatches := DecimalPattern.FindStringSubmatch(tokenStr)
+
+	if len(submatches) > 1 {
+		//Guaranteed to never get a parsing error because if submatch exists then the value must fit the float pattern
+		value, _ := strconv.ParseFloat(submatches[1], 64)
+		return models.MakeMoney(value)
+	}
+
+	return models.MakeMoney(0)
 }

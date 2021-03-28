@@ -2,7 +2,6 @@ package parse
 
 import (
 	"encoding/json"
-	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -14,9 +13,13 @@ func TestHelpCommand(t *testing.T) {
 	session := session.InMemorySession(func(d *gorm.DB) {})
 	input := "help"
 
-	action := ParseExpression(input, session)
+	action, suggestion := ParseExpression(input, session)
 
+	assert.NotNil(t, action)
 	result, consequences := action.Execute()
+
+	assert.True(t, suggestion.isValidAsIs)
+	assert.Empty(t, suggestion.nextArgs)
 
 	assert.Len(t, consequences, 0)
 
@@ -37,10 +40,13 @@ func TestHelpVerboseCommand(t *testing.T) {
 	session := session.InMemorySession(func(d *gorm.DB) {})
 	input := "help"
 
-	action := ParseExpression(input, session)
+	action, suggestion := ParseExpression(input, session)
 
+	assert.NotNil(t, action)
 	result, consequences := action.Execute()
 
+	assert.True(t, suggestion.isValidAsIs)
+	assert.Empty(t, suggestion.nextArgs)
 	assert.Len(t, consequences, 0)
 
 	var unmarshaled []map[string]interface{}
@@ -60,15 +66,10 @@ func TestHelpPartialVerboseCommand(t *testing.T) {
 	session := session.InMemorySession(func(d *gorm.DB) {})
 	input := "help --ver"
 
-	action := ParseExpression(input, session)
+	action, suggestion := ParseExpression(input, session)
 
-	result, consequences := action.Execute()
+	assert.Nil(t, action)
 
-	fmt.Println(result.Suggestions)
-
-	assert.Len(t, consequences, 0)
-	assert.Equal(t, "", result.Output)
-
-	assert.Len(t, result.Suggestions, 1)
-	assert.Contains(t, result.Suggestions, "--verbose")
+	assert.Len(t, suggestion.nextArgs, 1)
+	assert.Contains(t, suggestion.nextArgs, "--verbose")
 }

@@ -48,7 +48,7 @@ func TestCreateAccount(t *testing.T) {
 	assert.Nil(t, category.SuperCategoryID, "new category should not belong to another category")
 
 	// Test that return values are correct
-
+	assert.True(t, result.IsSuccessful)
 	assert.Len(t, consequences, 2)
 	assert.Empty(t, result.Output)
 	accountCreateConsequence := consequences[0]
@@ -59,4 +59,56 @@ func TestCreateAccount(t *testing.T) {
 
 	assert.Equal(t, actions.CREATE, categoryCreateConsequence.ConsequenceType)
 	// assert.Equal(t, category, categoryCreateConsequence.Object)
+}
+
+func TestCreateAccountEmptyCategoryNameDoesNotCreateCategory(t *testing.T) {
+	session := session.InMemorySession(models.MigrateSchema)
+
+	action := CreateAccountAction{Name: "Account Name", Description: "Account Description", StartingBalance: models.MakeMoney(123.45), CategoryName: "", Session: &session}
+
+	action.Execute()
+
+	var numCategories int64
+	session.Db.Model(&models.Category{}).Count(&numCategories)
+	assert.Zero(t, numCategories)
+}
+
+func TestCreateAccountExistingCategory(t *testing.T) {
+	session := session.InMemorySession(models.MigrateSchema)
+
+	var originalCategory models.Category
+	session.Db.FirstOrCreate(&originalCategory, models.Category{Name: "Existing Category"})
+
+	action := CreateAccountAction{Name: "Account Name", Description: "Account Description", StartingBalance: models.MakeMoney(123.45), CategoryName: "Existing Category", Session: &session}
+
+	result, consequences := action.Execute()
+
+	// Test that database has correct data
+
+	var account models.Account
+	var category models.Category
+	accountResult := session.Db.Preload("CurrentState").Find(&account, models.Account{Name: "Account Name"})
+	categoryResult := session.Db.Preload("Accounts.CurrentState").Find(&category, models.Category{Name: "Existing Category"})
+
+	assert.Nil(t, accountResult.Error)
+	assert.Nil(t, categoryResult.Error)
+
+	// Category
+	assert.Len(t, category.Accounts, 1, "new category should only have one account")
+	assert.Equal(t, account, category.Accounts[0])
+	assert.Empty(t, category.SubCategories)
+	assert.Equal(t, "Existing Category", category.Name)
+	assert.Nil(t, category.SuperCategoryID, "new category should not belong to another category")
+
+	// Test that return values are correct
+	assert.True(t, result.IsSuccessful)
+	assert.Len(t, consequences, 2)
+	assert.Empty(t, result.Output)
+	accountCreateConsequence := consequences[0]
+	categoryCreateConsequence := consequences[1]
+
+	assert.Equal(t, actions.CREATE, accountCreateConsequence.ConsequenceType)
+	assert.Equal(t, account, accountCreateConsequence.Object)
+
+	assert.Equal(t, actions.UPDATE, categoryCreateConsequence.ConsequenceType)
 }

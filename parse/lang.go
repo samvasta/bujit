@@ -110,7 +110,7 @@ var ModelTokens = []*TokenPattern{
 	allTokens[TRANSACTION],
 }
 
-func ParseExpression(input string, session session.Session) actions.Actioner {
+func ParseExpression(input string, session session.Session) (action actions.Actioner, suggestion AutoSuggestion) {
 	tokens := Tokenize(input)
 
 	actionTok := tokens[0]
@@ -118,38 +118,40 @@ func ParseExpression(input string, session session.Session) actions.Actioner {
 	exact, possible := PossibleMatches(actionTok, ActionTokens)
 
 	if exact == nil {
-		return actions.MakeAutoSuggestAction(false, DisplayNames(possible))
+		return nil, MakeAutoSuggestion(false, DisplayNames(possible))
 	}
+
+	parseContext := EmptyParseContext(tokens, session)
 
 	switch exact.Id {
 	case NEW:
-		return nil
+		return ParseNew(&parseContext)
 	case LIST:
-		return nil
+		return nil, EmptySuggestions
 	case DELETE:
-		return nil
+		return nil, EmptySuggestions
 	case MODIFY:
-		return nil
+		return nil, EmptySuggestions
 	case DETAIL:
-		return nil
+		return nil, EmptySuggestions
 	case CLOSE:
-		return nil
+		return nil, EmptySuggestions
 	case OPEN:
-		return nil
+		return nil, EmptySuggestions
 	case CONFIGURE:
-		return nil
+		return nil, EmptySuggestions
 	case HELP:
-		return ParseHelpRoot(&HelpContext{ParseContext: EmptyParseContext(tokens, session), verbose: false})
+		return ParseHelpRoot(&HelpContext{ParseContext: parseContext, verbose: false})
 	case EXIT:
-		return nil
+		return nil, EmptySuggestions
 	case VERSION:
-		return nil
+		return nil, EmptySuggestions
 	default:
-		return nil
+		return nil, EmptySuggestions
 	}
 }
 
-func ParseNew(context *ParseContext) actions.Actioner {
+func ParseNew(context *ParseContext) (action actions.Actioner, suggestions AutoSuggestion) {
 	nextToken, hasNext := context.NextToken()
 
 	if hasNext {
@@ -158,7 +160,7 @@ func ParseNew(context *ParseContext) actions.Actioner {
 		switch exact.Id {
 		case CATEGORY:
 			context.MoveToNextToken()
-			return nil
+			return nil, EmptySuggestions
 		case ACCOUNT:
 			context.MoveToNextToken()
 			return ParseNewAccount(
@@ -167,12 +169,12 @@ func ParseNew(context *ParseContext) actions.Actioner {
 					action:       actions_accounts.CreateAccountAction{Session: &context.session}})
 		case ACCOUNT_STATE:
 			context.MoveToNextToken()
-			return nil
+			return nil, EmptySuggestions
 		case TRANSACTION:
 			context.MoveToNextToken()
-			return nil
+			return nil, EmptySuggestions
 		}
 	}
 
-	return actions.MakeAutoSuggestAction(false, DisplayNames(ModelTokens))
+	return nil, MakeAutoSuggestion(false, DisplayNames(ModelTokens))
 }

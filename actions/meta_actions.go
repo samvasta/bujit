@@ -8,14 +8,14 @@ import (
 
 type ExitAction struct{}
 
-func (exitAction *ExitAction) execute() (ActionResult, []*Consequence) {
-	return ActionResult{"goodbye", []string{}}, []*Consequence{}
+func (exitAction ExitAction) Execute() (ActionResult, []*Consequence) {
+	return ActionResult{"goodbye", true}, []*Consequence{}
 }
 
 type VersionAction struct{}
 
-func (versionAction *VersionAction) execute() (ActionResult, []*Consequence) {
-	return ActionResult{config.Version(), []string{}}, []*Consequence{}
+func (versionAction VersionAction) Execute() (ActionResult, []*Consequence) {
+	return ActionResult{config.Version(), true}, []*Consequence{}
 }
 
 type ConfigureAction struct {
@@ -23,8 +23,8 @@ type ConfigureAction struct {
 	value         interface{}
 }
 
-func (configureAction *ConfigureAction) execute() (ActionResult, []*Consequence) {
+func (configureAction ConfigureAction) Execute() (ActionResult, []*Consequence) {
 	configureAction.configureFunc(configureAction.value)
 
-	return ActionResult{fmt.Sprintf("Set to %v", configureAction.value), []string{}}, []*Consequence{}
+	return ActionResult{fmt.Sprintf("Set to %v", configureAction.value), true}, []*Consequence{}
 }

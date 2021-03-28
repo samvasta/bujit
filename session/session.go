@@ -34,5 +34,5 @@ func SQLiteSession(pathToDb string, initDb func(*gorm.DB)) Session {
 }
 
 func InMemorySession(initDb func(*gorm.DB)) Session {
-	return SQLiteSession("file::memory:?cache=shared", initDb)
+	return SQLiteSession("file::memory:", initDb)
 }
