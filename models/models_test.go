@@ -23,6 +23,7 @@ func TestCategoryMarshal(t *testing.T) {
 		time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC).Unix(),
 		MakeMoney(432.12),
 		nil, nil,
+		false,
 		&session}
 
 	state2 := AccountState{
@@ -30,6 +31,7 @@ func TestCategoryMarshal(t *testing.T) {
 		time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC).Unix(),
 		MakeMoney(123.45),
 		nil, nil,
+		false,
 		&session}
 
 	account := Account{
@@ -55,27 +57,29 @@ func TestCategoryMarshal(t *testing.T) {
 	}
 
 	subCategory := Category{
-		ID:              3,
-		CreatedAt:       time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC).Unix(),
-		UpdatedAt:       time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC).Unix(),
-		Name:            "Test Category",
-		Description:     "Description",
-		SuperCategoryID: &categoryId,
-		SubCategories:   []Category{},
-		Accounts:        []Account{account2}, // Make sure the currentBalance includes the balance of this account
-		Session:         &session,
+		ID:                 3,
+		CreatedAt:          time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC).Unix(),
+		UpdatedAt:          time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC).Unix(),
+		Name:               "Test Category",
+		FullyQualifiedName: "Test Category",
+		Description:        "Description",
+		SuperCategoryID:    &categoryId,
+		SubCategories:      []Category{},
+		Accounts:           []Account{account2}, // Make sure the currentBalance includes the balance of this account
+		Session:            &session,
 	}
 
 	category := Category{
-		ID:              1,
-		CreatedAt:       time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC).Unix(),
-		UpdatedAt:       time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC).Unix(),
-		Name:            "Test Category",
-		Description:     "Description",
-		SuperCategoryID: &parentId,
-		SubCategories:   []Category{subCategory},
-		Accounts:        []Account{account},
-		Session:         &session,
+		ID:                 1,
+		CreatedAt:          time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC).Unix(),
+		UpdatedAt:          time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC).Unix(),
+		Name:               "Test Category",
+		FullyQualifiedName: "Test Category",
+		Description:        "Description",
+		SuperCategoryID:    &parentId,
+		SubCategories:      []Category{subCategory},
+		Accounts:           []Account{account},
+		Session:            &session,
 	}
 
 	jsonBytes, error := json.Marshal(category)
@@ -108,6 +112,7 @@ func TestAccountStateMarshal(t *testing.T) {
 		time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC).Unix(),
 		MakeMoney(432.12),
 		nil, nil,
+		false,
 		&session}
 
 	jsonBytes, error := json.Marshal(as)
@@ -135,16 +140,17 @@ func TestAccountMarshal(t *testing.T) {
 		time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC).Unix(),
 		MakeMoney(123.45),
 		nil, nil,
+		false,
 		&session}
 	account := Account{
-		123,
-		time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC).Unix(),
-		"Account Name",
-		"description",
-		false,
-		&state.ID,
-		state,
-		&session}
+		ID:             123,
+		CreatedAt:      time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC).Unix(),
+		Name:           "Account Name",
+		Description:    "description",
+		IsActive:       false,
+		CurrentStateID: &state.ID,
+		CurrentState:   state,
+		Session:        &session}
 
 	jsonBytes, error := json.Marshal(account)
 	jsonStr := string(jsonBytes)
@@ -182,32 +188,34 @@ func TestTransactionMarshal(t *testing.T) {
 		time.Now().Unix(),
 		MakeMoney(12.34),
 		nil, nil,
+		false,
 		&session}
 	fromAccount := Account{
-		123,
-		time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC).Unix(),
-		"Source",
-		"description",
-		false,
-		&fromAccountState.ID,
-		fromAccountState,
-		&session}
+		ID:             123,
+		CreatedAt:      time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC).Unix(),
+		Name:           "Source",
+		Description:    "description",
+		IsActive:       false,
+		CurrentStateID: &fromAccountState.ID,
+		CurrentState:   fromAccountState,
+		Session:        &session}
 
 	toAccountState := AccountState{
 		2,
 		time.Now().Unix(),
 		MakeMoney(12.34),
 		nil, nil,
+		false,
 		&session}
 	toAccount := Account{
-		123,
-		time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC).Unix(),
-		"Sink",
-		"description",
-		false,
-		&toAccountState.ID,
-		toAccountState,
-		&session}
+		ID:             123,
+		CreatedAt:      time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC).Unix(),
+		Name:           "Sink",
+		Description:    "description",
+		IsActive:       false,
+		CurrentStateID: &toAccountState.ID,
+		CurrentState:   toAccountState,
+		Session:        &session}
 
 	transaction := Transaction{
 		123,

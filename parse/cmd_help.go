@@ -10,26 +10,26 @@ type HelpContext struct {
 	verbose bool
 }
 
-var VerboseToken *TokenPattern = MakeFlagToken(1, "v", "verbose")
+var VerboseToken *TokenPattern = makeFlagToken(1, "v", "verbose")
 var parseRootNextTokens = []*TokenPattern{VerboseToken}
 
-func ParseHelpRoot(context *HelpContext) (action actions.Actioner, suggestion AutoSuggestion) {
-	nextToken, hasNext := context.NextToken()
+func parseHelpRoot(context *HelpContext) (action actions.Actioner, suggestion AutoSuggestion) {
+	nextToken, hasNext := context.nextToken()
 
 	if hasNext {
 		exact, possible := PossibleMatches(nextToken, parseRootNextTokens)
 
 		if exact == nil {
-			return nil, MakeAutoSuggestion(false, DisplayNames(possible))
+			return nil, makeAutoSuggestion(false, DisplayNames(possible))
 		}
 
 		switch exact.Id {
 		case VerboseToken.Id:
 			context.verbose = true
-			context.MoveToNextToken()
-			return ParseHelpRoot(context)
+			context.moveToNextToken()
+			return parseHelpRoot(context)
 		default:
-			return nil, MakeAutoSuggestion(false, DisplayNames(possible))
+			return nil, makeAutoSuggestion(false, DisplayNames(possible))
 		}
 	} else if VerboseToken.Matches(nextToken) {
 		// return verbose help

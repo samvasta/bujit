@@ -5,7 +5,7 @@ type AutoSuggestion struct {
 	nextArgs    []string
 }
 
-func MakeAutoSuggestion(isValidAsIs bool, nextTokens []string) AutoSuggestion {
+func makeAutoSuggestion(isValidAsIs bool, nextTokens []string) AutoSuggestion {
 	var nextArgs []string
 
 	for _, token := range nextTokens {

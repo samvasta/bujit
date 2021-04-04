@@ -10,11 +10,6 @@ import (
 	"samvasta.com/bujit/models"
 )
 
-var IntegerPattern *regexp.Regexp = regexp.MustCompile(`[^\w|\d|\.|\,|'|"|_|-]?(-?\d+)(\W?[A-Z]{3})?`)
-var DecimalPattern *regexp.Regexp = regexp.MustCompile(`[^\w|\d|\.|\,|'|"|_|-]?(-?\d+(\.\d{1,2})?)(\W?[A-Z]{3})?`)
-
-var ItemNamePattern *regexp.Regexp = regexp.MustCompile(`[a-zA-Z][a-zA-Z_-]+`)
-
 type TokenPattern struct {
 	Id          int
 	DisplayName string
@@ -60,7 +55,7 @@ func MakeLiteralToken(id int, literalOptions ...string) *TokenPattern {
 	return &TokenPattern{id, literalOptions[0], patterns}
 }
 
-func MakeFlagToken(id int, shortName, longName string) *TokenPattern {
+func makeFlagToken(id int, shortName, longName string) *TokenPattern {
 	displayName := fmt.Sprintf("--%s", longName)
 	patterns := []*regexp.Regexp{
 		regexp.MustCompile(regexp.QuoteMeta(fmt.Sprintf("-%s", shortName))),
@@ -70,41 +65,7 @@ func MakeFlagToken(id int, shortName, longName string) *TokenPattern {
 	return &TokenPattern{id, displayName, patterns}
 }
 
-var ArgumentTokenPattern *regexp.Regexp = regexp.MustCompile("[a-zA-Z0-9]+")
-
-func MakeArgToken(id int, displayName string, pattern *regexp.Regexp) *TokenPattern {
-	var sb strings.Builder
-
-	sb.WriteRune('<')
-	for i, match := range ArgumentTokenPattern.FindAllString(displayName, -1) {
-		if i > 0 {
-			sb.WriteRune('-')
-		}
-		sb.WriteString(match)
-	}
-	sb.WriteRune('>')
-
-	return &TokenPattern{id, sb.String(), []*regexp.Regexp{pattern}}
-}
-
-func MakeOptionalArgToken(id int, shortName, longName, patternName string, pattern *regexp.Regexp) *TokenPattern {
-	patterns := []*regexp.Regexp{
-		regexp.MustCompile(fmt.Sprintf("-%s=(%s)", shortName, pattern.String())),
-		regexp.MustCompile(fmt.Sprintf("--%s=(%s)", longName, pattern.String())),
-	}
-	return &TokenPattern{id, fmt.Sprintf("--%s=<%s>", longName, strings.ToUpper(patternName)), patterns}
-
-}
-
-func ExtractArgValue(token string) string {
-	idx := strings.Index(token, "=")
-	if idx < 0 {
-		return ""
-	}
-	return token[idx+1:]
-}
-
-var TokenizePattern = regexp.MustCompile(`[^\s"']+|"([^"]*)"|'([^']*)'`)
+var TokenizePattern = regexp.MustCompile(`[^\s"'=]+=?|"([^"]*)"|'([^']*)'`)
 
 func Tokenize(input string) (tokens []string) {
 	matches := TokenizePattern.FindAllStringSubmatch(input, -1)
@@ -180,11 +141,11 @@ func PossibleMatches(test string, possibleTokens []*TokenPattern) (exactMatch *T
 	return exactMatch, possibleMatches
 }
 
-func ItemNameValue(tokenStr string) string {
+func itemNameValue(tokenStr string) string {
 	return strings.Trim(tokenStr, `'"`)
 }
 
-func MoneyValue(tokenStr string) models.Money {
+func moneyValue(tokenStr string) models.Money {
 	submatches := DecimalPattern.FindStringSubmatch(tokenStr)
 
 	if len(submatches) > 1 {

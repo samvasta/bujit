@@ -2,6 +2,7 @@ package models
 
 import (
 	"encoding/json"
+	"fmt"
 	"time"
 
 	"gorm.io/gorm"
@@ -9,15 +10,36 @@ import (
 )
 
 type Category struct {
-	ID              uint  `gorm:"primaryKey"`
-	CreatedAt       int64 `gorm:"autoCreateTime"`
-	UpdatedAt       int64 `gorm:"autoUpdateTime"`
-	Name            string
-	Description     string
-	SuperCategoryID *uint
-	SubCategories   []Category       `gorm:"foreignkey:SuperCategoryID"`
-	Accounts        []Account        `gorm:"foreignkey:ID"`
-	Session         *session.Session `gorm:"-"` // Ignored by ORM
+	ID                 uint  `gorm:"primaryKey"`
+	CreatedAt          int64 `gorm:"autoCreateTime"`
+	UpdatedAt          int64 `gorm:"autoUpdateTime"`
+	Name               string
+	FullyQualifiedName string `gorm:"unique"` // the compound name of this category and the parents' names. Ex. "grandparent/parent/this"
+	Description        string
+	SuperCategoryID    *uint
+	SubCategories      []Category       `gorm:"foreignkey:SuperCategoryID"`
+	Accounts           []Account        `gorm:"foreignkey:ID"`
+	Session            *session.Session `gorm:"-"` // Ignored by ORM
+}
+
+func MakeCategory(name, description string, superCategory *Category, accounts ...Account) Category {
+	category := Category{Name: name, Description: description, Accounts: accounts}
+	category.SetParent(superCategory)
+	return category
+}
+
+func (cat *Category) SetParent(parent *Category) {
+	if parent != nil {
+		cat.SuperCategoryID = &parent.ID
+		cat.FullyQualifiedName = fmt.Sprintf("%s/%s", parent.FullyQualifiedName, cat.Name)
+	} else {
+		cat.SuperCategoryID = nil
+		cat.FullyQualifiedName = cat.Name
+	}
+
+	for _, subCategory := range cat.SubCategories {
+		subCategory.SetParent(cat)
+	}
 }
 
 func (cat Category) CurrentBalance() Money {
@@ -61,6 +83,7 @@ type AccountState struct {
 	Balance     Money
 	PrevStateID *uint
 	PrevState   *AccountState
+	IsClosed    bool
 	Session     *session.Session `gorm:"-"` // Ignored by ORM
 }
 
@@ -75,13 +98,15 @@ func (as AccountState) MarshalJSON() ([]byte, error) {
 }
 
 type Account struct {
-	ID             uint  `gorm:"primaryKey"`
-	CreatedAt      int64 `gorm:"autoCreateTime"`
-	Name           string
+	ID             uint   `gorm:"primaryKey"`
+	CreatedAt      int64  `gorm:"autoCreateTime"`
+	Name           string `gorm:"unique"`
 	Description    string
 	IsActive       bool
 	CurrentStateID *uint
-	CurrentState   AccountState     `gorm:"foreignkey:CurrentStateID"`
+	CurrentState   AccountState `gorm:"foreignkey:CurrentStateID"`
+	CategoryID     *uint
+	Category       Category
 	Session        *session.Session `gorm:"-"` // Ignored by ORM
 }
 

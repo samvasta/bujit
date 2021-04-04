@@ -77,7 +77,7 @@ func TestCreateAccountExistingCategory(t *testing.T) {
 	session := session.InMemorySession(models.MigrateSchema)
 
 	var originalCategory models.Category
-	session.Db.FirstOrCreate(&originalCategory, models.Category{Name: "Existing Category"})
+	session.Db.FirstOrCreate(&originalCategory, models.MakeCategory("Existing Category", "", nil))
 
 	action := CreateAccountAction{Name: "Account Name", Description: "Account Description", StartingBalance: models.MakeMoney(123.45), CategoryName: "Existing Category", Session: &session}
 
@@ -111,4 +111,17 @@ func TestCreateAccountExistingCategory(t *testing.T) {
 	assert.Equal(t, account, accountCreateConsequence.Object)
 
 	assert.Equal(t, actions.UPDATE, categoryCreateConsequence.ConsequenceType)
+}
+
+func TestCreateAccountDuplicateName(t *testing.T) {
+	session := session.InMemorySession(models.MigrateSchema)
+
+	existingAccount := models.Account{Name: "Account Name", Description: "description", IsActive: true, CurrentState: models.AccountState{Balance: models.MakeMoney(1.23)}}
+	session.Db.Create(&existingAccount)
+
+	action := CreateAccountAction{Name: "Account Name", Description: "Account Description", StartingBalance: models.MakeMoney(123.45), CategoryName: "Existing Category", Session: &session}
+
+	result, _ := action.Execute()
+
+	assert.False(t, result.IsSuccessful)
 }

@@ -10,19 +10,18 @@ type ParseContext struct {
 	tokens            []string
 	currentTokenIndex int
 	isValid           bool
-	data              map[string]interface{}
 	session           session.Session
 }
 
-func (ctx *ParseContext) MoveToNextToken() {
+func (ctx *ParseContext) moveToNextToken() {
 	ctx.currentTokenIndex++
 }
 
 func EmptyParseContext(tokens []string, session session.Session) ParseContext {
-	return ParseContext{tokens, 1, true, make(map[string]interface{}), session}
+	return ParseContext{tokens, 1, true, session}
 }
 
-func (ctx *ParseContext) NextToken() (nextToken string, hasNext bool) {
+func (ctx *ParseContext) nextToken() (nextToken string, hasNext bool) {
 	if ctx.currentTokenIndex >= len(ctx.tokens) {
 		return "", false
 	}
@@ -42,21 +41,34 @@ const (
 	DETAIL
 	CLOSE
 	OPEN
-
-	// Flags
-	FROM
-	TO
 	SET
 	PRINT
-	FILTER
-	ORDER
-	BY
 
 	// Models
 	CATEGORY
 	ACCOUNT
 	ACCOUNT_STATE
 	TRANSACTION
+
+	// Args
+	ARG_FROM
+	ARG_TO
+	ARG_NAME
+	ARG_DESCRIPTION
+	ARG_CATEGORY
+	ARG_STARTING_BALANCE
+	ARG_MIN_BALANCE
+	ARG_MAX_BALANCE
+
+	// Flags
+	FLAG_HELP
+
+	// Misc
+	FILTER
+	ORDER
+	BY
+	FROM
+	TO
 )
 
 var allTokens map[int]*TokenPattern = map[int]*TokenPattern{
@@ -118,7 +130,7 @@ func ParseExpression(input string, session session.Session) (action actions.Acti
 	exact, possible := PossibleMatches(actionTok, ActionTokens)
 
 	if exact == nil {
-		return nil, MakeAutoSuggestion(false, DisplayNames(possible))
+		return nil, makeAutoSuggestion(false, DisplayNames(possible))
 	}
 
 	parseContext := EmptyParseContext(tokens, session)
@@ -127,7 +139,7 @@ func ParseExpression(input string, session session.Session) (action actions.Acti
 	case NEW:
 		return ParseNew(&parseContext)
 	case LIST:
-		return nil, EmptySuggestions
+		return ParseList(&parseContext)
 	case DELETE:
 		return nil, EmptySuggestions
 	case MODIFY:
@@ -141,7 +153,7 @@ func ParseExpression(input string, session session.Session) (action actions.Acti
 	case CONFIGURE:
 		return nil, EmptySuggestions
 	case HELP:
-		return ParseHelpRoot(&HelpContext{ParseContext: parseContext, verbose: false})
+		return parseHelpRoot(&HelpContext{ParseContext: parseContext, verbose: false})
 	case EXIT:
 		return nil, EmptySuggestions
 	case VERSION:
@@ -151,30 +163,58 @@ func ParseExpression(input string, session session.Session) (action actions.Acti
 	}
 }
 
-func ParseNew(context *ParseContext) (action actions.Actioner, suggestions AutoSuggestion) {
-	nextToken, hasNext := context.NextToken()
+func ParseNew(context *ParseContext) (action actions.Actioner, suggestion AutoSuggestion) {
+	nextToken, hasNext := context.nextToken()
 
 	if hasNext {
 		exact, _ := PossibleMatches(nextToken, ModelTokens)
 
 		switch exact.Id {
 		case CATEGORY:
-			context.MoveToNextToken()
+			context.moveToNextToken()
 			return nil, EmptySuggestions
 		case ACCOUNT:
-			context.MoveToNextToken()
-			return ParseNewAccount(
+			context.moveToNextToken()
+			return parseNewAccount(
 				&NewAccountContext{
 					ParseContext: *context,
 					action:       actions_accounts.CreateAccountAction{Session: &context.session}})
 		case ACCOUNT_STATE:
-			context.MoveToNextToken()
+			context.moveToNextToken()
 			return nil, EmptySuggestions
 		case TRANSACTION:
-			context.MoveToNextToken()
+			context.moveToNextToken()
 			return nil, EmptySuggestions
 		}
 	}
 
-	return nil, MakeAutoSuggestion(false, DisplayNames(ModelTokens))
+	return nil, makeAutoSuggestion(false, DisplayNames(ModelTokens))
+}
+
+func ParseList(context *ParseContext) (action actions.Actioner, suggestion AutoSuggestion) {
+	nextToken, hasNext := context.nextToken()
+
+	if hasNext {
+		exact, _ := PossibleMatches(nextToken, ModelTokens)
+
+		switch exact.Id {
+		case CATEGORY:
+			context.moveToNextToken()
+			return nil, EmptySuggestions
+		case ACCOUNT:
+			context.moveToNextToken()
+			return parseListAccount(
+				&ListAccountContext{
+					ParseContext: *context,
+					action:       actions_accounts.ListAccountAction{Session: &context.session}})
+		case ACCOUNT_STATE:
+			context.moveToNextToken()
+			return nil, EmptySuggestions
+		case TRANSACTION:
+			context.moveToNextToken()
+			return nil, EmptySuggestions
+		}
+	}
+
+	return nil, makeAutoSuggestion(false, DisplayNames(ModelTokens))
 }

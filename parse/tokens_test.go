@@ -269,7 +269,7 @@ func TestPossibleMatches2(t *testing.T) {
 		MakeLiteralToken(1, "fun"),
 		MakeLiteralToken(2, "fan"),
 		MakeLiteralToken(3, "fact"),
-		MakeOptionalArgToken(4, "a", "arg", "argument", ItemNamePattern),
+		MakeOptionalArgToken(4, "a", "arg"),
 	}
 
 	exactMatch, possibleMatches := PossibleMatches("fact", tokens)
@@ -280,18 +280,8 @@ func TestPossibleMatches2(t *testing.T) {
 	assert.NotContains(t, possibleMatches, tokens[3])
 }
 
-func TestPossibleMatches3(t *testing.T) {
-	tokens := []*TokenPattern{
-		MakeOptionalArgToken(1, "a", "arg", "argument", ItemNamePattern),
-	}
-
-	exactMatch, _ := PossibleMatches("--arg=something", tokens)
-
-	assert.Equal(t, tokens[0], exactMatch)
-}
-
 func TestPossibleMatchesNoDuplicates(t *testing.T) {
-	tokens := []*TokenPattern{MakeFlagToken(1, "t", "test")}
+	tokens := []*TokenPattern{makeFlagToken(1, "t", "test")}
 
 	exact, possible := PossibleMatches("--te", tokens)
 
@@ -302,7 +292,7 @@ func TestPossibleMatchesNoDuplicates(t *testing.T) {
 }
 
 func TestMakeOptionalArgToken(t *testing.T) {
-	token := MakeOptionalArgToken(1, "t", "test", "str", regexp.MustCompile("hardcodedvalue"))
+	token := MakeOptionalArgToken(1, "t", "test")
 
 	var patterns []string
 
@@ -311,12 +301,13 @@ func TestMakeOptionalArgToken(t *testing.T) {
 	}
 
 	assert.Len(t, patterns, 2)
-	assert.Contains(t, patterns, "-t=(hardcodedvalue)")
-	assert.Contains(t, patterns, "--test=(hardcodedvalue)")
+	assert.Contains(t, patterns, "-t=?")
+	assert.Contains(t, patterns, "--test=?")
 
-	assert.True(t, token.Matches("-t=hardcodedvalue"))
-	assert.True(t, token.Matches("--test=hardcodedvalue"))
-	assert.False(t, token.Matches("-t=notthevalue"))
+	assert.True(t, token.Matches("-t"))
+	assert.True(t, token.Matches("-t="))
+	assert.True(t, token.Matches("--test"))
+	assert.True(t, token.Matches("--test="))
 }
 
 func TestExtractArgValue(t *testing.T) {
@@ -331,7 +322,7 @@ func TestItemNameValue(t *testing.T) {
 
 	testCase := func(input, expected string) func(t *testing.T) {
 		return func(t *testing.T) {
-			result := ItemNameValue(input)
+			result := itemNameValue(input)
 			assert.Equal(t, expected, result)
 		}
 	}
@@ -345,7 +336,7 @@ func TestMoneyValue(t *testing.T) {
 
 	testCase := func(input string, expected models.Money) func(t *testing.T) {
 		return func(t *testing.T) {
-			result := MoneyValue(input)
+			result := moneyValue(input)
 			assert.Equal(t, expected, result)
 		}
 	}
