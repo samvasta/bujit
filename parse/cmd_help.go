@@ -20,7 +20,7 @@ func parseHelpRoot(context *HelpContext) (action actions.Actioner, suggestion Au
 		exact, possible := PossibleMatches(nextToken, parseRootNextTokens)
 
 		if exact == nil {
-			return nil, makeAutoSuggestion(false, DisplayNames(possible))
+			return nil, makeAutoSuggestion(false, nextToken, possible)
 		}
 
 		switch exact.Id {
@@ -29,7 +29,7 @@ func parseHelpRoot(context *HelpContext) (action actions.Actioner, suggestion Au
 			context.moveToNextToken()
 			return parseHelpRoot(context)
 		default:
-			return nil, makeAutoSuggestion(false, DisplayNames(possible))
+			return nil, makeAutoSuggestion(false, nextToken, possible)
 		}
 	} else if VerboseToken.Matches(nextToken) {
 		// return verbose help

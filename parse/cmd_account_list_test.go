@@ -31,14 +31,14 @@ func TestAccountListCommand(t *testing.T) {
 	testCase := func(input string, isValid bool, expectedSuggestions []string, additionalCheck func(t *testing.T, action actions.Actioner)) func(t *testing.T) {
 		return func(t *testing.T) {
 
-			action, suggestion := ParseExpression(input, session)
+			action, suggestion := ParseExpression(input, &session)
 
-			assert.Equal(t, isValid, suggestion.isValidAsIs)
+			assert.Equal(t, isValid, suggestion.IsValidAsIs)
 
 			for _, expectedSuggestion := range expectedSuggestions {
-				assert.Contains(t, suggestion.nextArgs, expectedSuggestion)
+				assert.Contains(t, suggestion.NextArgs, expectedSuggestion)
 			}
-			assert.Len(t, suggestion.nextArgs, len(expectedSuggestions))
+			assert.Len(t, suggestion.NextArgs, len(expectedSuggestions))
 
 			additionalCheck(t, action)
 		}

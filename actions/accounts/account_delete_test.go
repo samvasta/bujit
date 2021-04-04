@@ -65,3 +65,17 @@ func TestDeleteAccountAction_Hard(t *testing.T) {
 	assert.Zero(t, numAccounts)
 	assert.Zero(t, numAccountStates)
 }
+
+func TestDeleteAccountAction_DoesNotExist(t *testing.T) {
+	session := session.InMemorySession(models.MigrateSchema)
+
+	account := models.Account{Name: "Account 1", Description: "description1", IsActive: true, CurrentState: models.AccountState{Balance: models.MakeMoney(1.23)}}
+	session.Db.Create(&account)
+
+	action := DeleteAccountAction{Session: &session, Name: "Does not exist", IsHardDelete: false}
+	result, consequences := action.Execute()
+
+	assert.False(t, result.IsSuccessful)
+	assert.JSONEq(t, `{"detail": "No account with name 'Does not exist'"}`, result.Output)
+	assert.Len(t, consequences, 0)
+}

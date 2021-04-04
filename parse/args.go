@@ -50,11 +50,11 @@ func parseOptionalArg(ctx *ParseContext, tok *TokenPattern, argPattern *regexp.R
 
 	if !hasNext {
 		// Missing flag token
-		return "", makeAutoSuggestion(false, []string{tok.DisplayName})
+		return "", makeAutoSuggestion(false, "", []*TokenPattern{tok})
 	} else {
 
 		if !tok.Matches(nextToken) {
-			return "", makeAutoSuggestion(false, []string{tok.DisplayName})
+			return "", makeAutoSuggestion(false, nextToken, []*TokenPattern{tok})
 		}
 
 		// Parse next token
@@ -64,10 +64,10 @@ func parseOptionalArg(ctx *ParseContext, tok *TokenPattern, argPattern *regexp.R
 
 		if !hasNext {
 			// Missing arg value
-			return "", makeAutoSuggestion(false, []string{fmt.Sprintf("<%s>", argPatternName)})
+			return "", AutoSuggestion{false, "", []string{fmt.Sprintf("<%s>", argPatternName)}}
 		}
 
 		ctx.moveToNextToken()
-		return nextToken, makeAutoSuggestion(true, []string{fmt.Sprintf("<%s>", argPatternName)})
+		return nextToken, AutoSuggestion{true, "", []string{}}
 	}
 }

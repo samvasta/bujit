@@ -13,13 +13,13 @@ func TestHelpCommand(t *testing.T) {
 	session := session.InMemorySession(func(d *gorm.DB) {})
 	input := "help"
 
-	action, suggestion := ParseExpression(input, session)
+	action, suggestion := ParseExpression(input, &session)
 
 	assert.NotNil(t, action)
 	result, consequences := action.Execute()
 
-	assert.True(t, suggestion.isValidAsIs)
-	assert.Empty(t, suggestion.nextArgs)
+	assert.True(t, suggestion.IsValidAsIs)
+	assert.Empty(t, suggestion.NextArgs)
 
 	assert.Len(t, consequences, 0)
 
@@ -40,13 +40,13 @@ func TestHelpVerboseCommand(t *testing.T) {
 	session := session.InMemorySession(func(d *gorm.DB) {})
 	input := "help"
 
-	action, suggestion := ParseExpression(input, session)
+	action, suggestion := ParseExpression(input, &session)
 
 	assert.NotNil(t, action)
 	result, consequences := action.Execute()
 
-	assert.True(t, suggestion.isValidAsIs)
-	assert.Empty(t, suggestion.nextArgs)
+	assert.True(t, suggestion.IsValidAsIs)
+	assert.Empty(t, suggestion.NextArgs)
 	assert.Len(t, consequences, 0)
 
 	var unmarshaled []map[string]interface{}
@@ -66,10 +66,10 @@ func TestHelpPartialVerboseCommand(t *testing.T) {
 	session := session.InMemorySession(func(d *gorm.DB) {})
 	input := "help --ver"
 
-	action, suggestion := ParseExpression(input, session)
+	action, suggestion := ParseExpression(input, &session)
 
 	assert.Nil(t, action)
 
-	assert.Len(t, suggestion.nextArgs, 1)
-	assert.Contains(t, suggestion.nextArgs, "--verbose")
+	assert.Len(t, suggestion.NextArgs, 1)
+	assert.Contains(t, suggestion.NextArgs, "--verbose")
 }

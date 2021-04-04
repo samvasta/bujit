@@ -280,6 +280,21 @@ func TestPossibleMatches2(t *testing.T) {
 	assert.NotContains(t, possibleMatches, tokens[3])
 }
 
+func TestPossibleMatches3(t *testing.T) {
+	tokens := []*TokenPattern{
+		MakeLiteralToken(1, "new"),
+		MakeLiteralToken(2, "list"),
+		MakeLiteralToken(3, "delete"),
+	}
+
+	exactMatch, possibleMatches := PossibleMatches("l", tokens)
+
+	assert.Nil(t, exactMatch)
+	assert.NotContains(t, possibleMatches, tokens[0])
+	assert.Contains(t, possibleMatches, tokens[1])
+	assert.NotContains(t, possibleMatches, tokens[2])
+}
+
 func TestPossibleMatchesNoDuplicates(t *testing.T) {
 	tokens := []*TokenPattern{makeFlagToken(1, "t", "test")}
 

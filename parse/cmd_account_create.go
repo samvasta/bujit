@@ -45,31 +45,14 @@ func (ctx NewAccountContext) possibleNextTokens() []*TokenPattern {
 func parseNewAccount(context *NewAccountContext) (action actions.Actioner, suggestion AutoSuggestion) {
 	nextToken, hasNext := context.nextToken()
 
-	missingTokens := []*TokenPattern{}
-
-	if !context.hasName {
-		missingTokens = append(missingTokens, newAccountArgs[ARG_NAME])
-		missingTokens = append(missingTokens, newAccountArgs[FLAG_HELP])
-	} else {
-		if !context.hasDescription {
-			missingTokens = append(missingTokens, newAccountArgs[ARG_DESCRIPTION])
-		}
-
-		if !context.hasCategory {
-			missingTokens = append(missingTokens, newAccountArgs[ARG_CATEGORY])
-		}
-
-		if !context.hasStartingBalance {
-			missingTokens = append(missingTokens, newAccountArgs[ARG_STARTING_BALANCE])
-		}
-	}
+	missingTokens := context.possibleNextTokens()
 
 	if hasNext {
-		possibleTokens := context.possibleNextTokens()
+		possibleTokens := missingTokens
 		exact, possible := PossibleMatches(nextToken, possibleTokens)
 
 		if exact == nil {
-			return nil, makeAutoSuggestion(false, DisplayNames(possible))
+			return nil, makeAutoSuggestion(false, nextToken, possible)
 		}
 
 		switch exact.Id {
@@ -81,7 +64,7 @@ func parseNewAccount(context *NewAccountContext) (action actions.Actioner, sugge
 		case ARG_DESCRIPTION:
 			context.hasDescription = true
 			value, suggestion := parseOptionalArg(&context.ParseContext, newAccountArgs[ARG_DESCRIPTION], ItemNamePattern, "description")
-			if suggestion.isValidAsIs {
+			if suggestion.IsValidAsIs {
 				context.action.Description = itemNameValue(value)
 				return parseNewAccount(context)
 			} else {
@@ -90,7 +73,7 @@ func parseNewAccount(context *NewAccountContext) (action actions.Actioner, sugge
 		case ARG_CATEGORY:
 			context.hasCategory = true
 			value, suggestion := parseOptionalArg(&context.ParseContext, newAccountArgs[ARG_CATEGORY], ItemNamePattern, "category")
-			if suggestion.isValidAsIs {
+			if suggestion.IsValidAsIs {
 				context.action.CategoryName = itemNameValue(value)
 				return parseNewAccount(context)
 			} else {
@@ -99,7 +82,7 @@ func parseNewAccount(context *NewAccountContext) (action actions.Actioner, sugge
 		case ARG_STARTING_BALANCE:
 			context.hasStartingBalance = true
 			value, suggestion := parseOptionalArg(&context.ParseContext, newAccountArgs[ARG_STARTING_BALANCE], DecimalPattern, "balance")
-			if suggestion.isValidAsIs {
+			if suggestion.IsValidAsIs {
 				context.action.StartingBalance = moneyValue(value)
 				return parseNewAccount(context)
 			} else {
@@ -109,10 +92,10 @@ func parseNewAccount(context *NewAccountContext) (action actions.Actioner, sugge
 			return newAccountHelpAction(context)
 		}
 	} else if context.action.IsValid() {
-		return context.action, makeAutoSuggestion(true, DisplayNames(missingTokens))
+		return context.action, makeAutoSuggestion(true, nextToken, missingTokens)
 	}
 
-	return nil, makeAutoSuggestion(false, DisplayNames(missingTokens))
+	return nil, makeAutoSuggestion(false, "", missingTokens)
 }
 
 func newAccountHelpAction(context *NewAccountContext) (action actions.Actioner, suggestion AutoSuggestion) {

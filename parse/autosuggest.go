@@ -1,18 +1,22 @@
 package parse
 
 type AutoSuggestion struct {
-	isValidAsIs bool
-	nextArgs    []string
+	IsValidAsIs  bool
+	CurrentToken string
+	NextArgs     []string
 }
 
-func makeAutoSuggestion(isValidAsIs bool, nextTokens []string) AutoSuggestion {
+func makeAutoSuggestion(isValidAsIs bool, currentToken string, nextTokens []*TokenPattern) AutoSuggestion {
 	var nextArgs []string
 
 	for _, token := range nextTokens {
-		nextArgs = append(nextArgs, token)
+		bestMatch := token.BestMatch(currentToken)
+		if bestMatch != "" {
+			nextArgs = append(nextArgs, bestMatch)
+		}
 	}
 
-	return AutoSuggestion{isValidAsIs, nextArgs}
+	return AutoSuggestion{isValidAsIs, currentToken, nextArgs}
 }
 
-var EmptySuggestions AutoSuggestion = AutoSuggestion{true, []string{}}
+var EmptySuggestions AutoSuggestion = AutoSuggestion{true, "", []string{}}

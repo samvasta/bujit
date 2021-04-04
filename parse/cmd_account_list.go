@@ -40,7 +40,7 @@ func (ctx ListAccountContext) possibleNextTokens() []*TokenPattern {
 		tokens = append(tokens, listAccountArgs[ARG_MAX_BALANCE])
 	}
 
-	if len(tokens) == 0 {
+	if !ctx.hasName && !ctx.hasDescription && !ctx.hasCategory && !ctx.hasBalanceMin && !ctx.hasBalanceMax {
 		// Only want to accept the help flag if no other args have been seen
 		tokens = append(tokens, listAccountArgs[FLAG_HELP])
 	}
@@ -51,43 +51,21 @@ func (ctx ListAccountContext) possibleNextTokens() []*TokenPattern {
 func parseListAccount(context *ListAccountContext) (action actions.Actioner, suggestion AutoSuggestion) {
 	nextToken, hasNext := context.nextToken()
 
-	missingTokens := []*TokenPattern{}
-
-	if !context.hasName {
-		missingTokens = append(missingTokens, listAccountArgs[ARG_NAME])
-	}
-	if !context.hasDescription {
-		missingTokens = append(missingTokens, listAccountArgs[ARG_DESCRIPTION])
-	}
-
-	if !context.hasCategory {
-		missingTokens = append(missingTokens, listAccountArgs[ARG_CATEGORY])
-	}
-
-	if !context.hasBalanceMin {
-		missingTokens = append(missingTokens, listAccountArgs[ARG_MIN_BALANCE])
-	}
-	if !context.hasBalanceMax {
-		missingTokens = append(missingTokens, listAccountArgs[ARG_MAX_BALANCE])
-	}
-
-	if !context.hasName && !context.hasDescription && !context.hasCategory && !context.hasBalanceMin && !context.hasBalanceMax {
-		missingTokens = append(missingTokens, listAccountArgs[FLAG_HELP])
-	}
+	missingTokens := context.possibleNextTokens()
 
 	if hasNext {
-		possibleTokens := context.possibleNextTokens()
+		possibleTokens := missingTokens
 		exact, possible := PossibleMatches(nextToken, possibleTokens)
 
 		if exact == nil {
-			return nil, makeAutoSuggestion(false, DisplayNames(possible))
+			return nil, makeAutoSuggestion(false, nextToken, possible)
 		}
 
 		switch exact.Id {
 		case ARG_NAME:
 			context.hasName = true
 			value, suggestion := parseOptionalArg(&context.ParseContext, listAccountArgs[ARG_NAME], ItemNamePattern, "name")
-			if suggestion.isValidAsIs {
+			if suggestion.IsValidAsIs {
 				context.action.Name = itemNameValue(value)
 				return parseListAccount(context)
 			} else {
@@ -96,7 +74,7 @@ func parseListAccount(context *ListAccountContext) (action actions.Actioner, sug
 		case ARG_DESCRIPTION:
 			context.hasDescription = true
 			value, suggestion := parseOptionalArg(&context.ParseContext, listAccountArgs[ARG_DESCRIPTION], ItemNamePattern, "description")
-			if suggestion.isValidAsIs {
+			if suggestion.IsValidAsIs {
 				context.action.Description = itemNameValue(value)
 				return parseListAccount(context)
 			} else {
@@ -105,7 +83,7 @@ func parseListAccount(context *ListAccountContext) (action actions.Actioner, sug
 		case ARG_CATEGORY:
 			context.hasCategory = true
 			value, suggestion := parseOptionalArg(&context.ParseContext, listAccountArgs[ARG_CATEGORY], ItemNamePattern, "category")
-			if suggestion.isValidAsIs {
+			if suggestion.IsValidAsIs {
 				context.action.CategoryName = itemNameValue(value)
 				return parseListAccount(context)
 			} else {
@@ -114,7 +92,7 @@ func parseListAccount(context *ListAccountContext) (action actions.Actioner, sug
 		case ARG_MIN_BALANCE:
 			context.hasBalanceMin = true
 			value, suggestion := parseOptionalArg(&context.ParseContext, listAccountArgs[ARG_MIN_BALANCE], DecimalPattern, "min-balance")
-			if suggestion.isValidAsIs {
+			if suggestion.IsValidAsIs {
 				b := moneyValue(value)
 				context.action.MinBalance = &b
 				return parseListAccount(context)
@@ -124,7 +102,7 @@ func parseListAccount(context *ListAccountContext) (action actions.Actioner, sug
 		case ARG_MAX_BALANCE:
 			context.hasBalanceMax = true
 			value, suggestion := parseOptionalArg(&context.ParseContext, listAccountArgs[ARG_MAX_BALANCE], DecimalPattern, "max-balance")
-			if suggestion.isValidAsIs {
+			if suggestion.IsValidAsIs {
 				b := moneyValue(value)
 				context.action.MaxBalance = &b
 				return parseListAccount(context)
@@ -135,20 +113,29 @@ func parseListAccount(context *ListAccountContext) (action actions.Actioner, sug
 			return listAccountHelpAction(context)
 		}
 	} else if context.action.IsValid() {
-		return context.action, makeAutoSuggestion(true, DisplayNames(missingTokens))
+		return context.action, makeAutoSuggestion(true, nextToken, missingTokens)
 	}
 
-	return nil, makeAutoSuggestion(false, DisplayNames(missingTokens))
+	return nil, makeAutoSuggestion(false, "", missingTokens)
 }
 
 func listAccountHelpAction(context *ListAccountContext) (action actions.Actioner, suggestion AutoSuggestion) {
 	helpItems := output.EmptyOutputGroup().
-		Header("Create New Account Command").
+		Header("List Accounts Command").
 		HorizontalRule("═").
 		Header("Description").
-		Paragraph("Create a new account.").
+		Paragraph("Lists accounts.").
 		HorizontalRule("-").
-		Header("Syntax: new account <name> [-c=<category-name>] [-d=<description>] [-b=<starting-balance>]").
+		Header("Syntax: list account [-n=<account-name>] [-c=<category-name>] [-d=<description>] [-m=<min-balance>] [-x=<max-balance>]").
+		Indent().
+		UnorderedList([]string{
+			"name (-n or --name): filter the list of accounts by name. Filters out accounts with names that do not contain the provided value.",
+			"category (-c or --category): filter the list of accounts by category. Filters out accounts which do not belong, directly or indirectly, to a category with name containing the provided value.",
+			"description (-d or --description): filter the list of accounts by partial description. Filters accounts with descriptions that do not contain the provided value.",
+			"min-balance (-m or --min-balance): filter the list of accounts by balance. Filters out accounts with a balance below the provided value.",
+			"max-balance (-x or --max-balance): filter the list of accounts by balance. Filters out accounts with a balance above the provided value.",
+		}, output.NormalBulletChar).
+		Unindent().
 		ToSlice()
 
 	return actions.HelpAction{HelpItems: helpItems}, EmptySuggestions

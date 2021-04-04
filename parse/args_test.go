@@ -16,7 +16,7 @@ func TestParseOptionalArg(t *testing.T) {
 
 			session := session.InMemorySession(models.MigrateSchema)
 
-			ctx := ParseContext{tokens: Tokenize(input), currentTokenIndex: 0, isValid: true, session: session}
+			ctx := ParseContext{tokens: Tokenize(input), currentTokenIndex: 0, isValid: true, session: &session}
 			value, suggestion := parseOptionalArg(&ctx, argTok, ItemNamePattern, "patternName")
 
 			nextToken, hasNext := ctx.nextToken()
@@ -25,10 +25,10 @@ func TestParseOptionalArg(t *testing.T) {
 			assert.False(t, hasNext)
 
 			assert.Equal(t, output, value)
-			assert.Equal(t, isValid, suggestion.isValidAsIs)
+			assert.Equal(t, isValid, suggestion.IsValidAsIs)
 
 			for _, expected := range suggestions {
-				assert.Contains(t, suggestion.nextArgs, expected)
+				assert.Contains(t, suggestion.NextArgs, expected)
 			}
 		}
 	}

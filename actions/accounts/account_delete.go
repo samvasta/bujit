@@ -1,6 +1,8 @@
 package actions_accounts
 
 import (
+	"fmt"
+
 	"samvasta.com/bujit/actions"
 	"samvasta.com/bujit/models"
 	"samvasta.com/bujit/session"
@@ -32,6 +34,11 @@ func (action DeleteAccountAction) Execute() (actions.ActionResult, []*actions.Co
 
 	if tx.Error != nil {
 		return actions.ActionResult{Output: tx.Error.Error(), IsSuccessful: false}, []*actions.Consequence{}
+	}
+
+	if len(accounts) == 0 {
+		// No account found matching name
+		return actions.ActionResult{Output: fmt.Sprintf(`{"detail": "No account with name '%s'"}`, action.Name), IsSuccessful: false}, []*actions.Consequence{}
 	}
 
 	if action.IsHardDelete {

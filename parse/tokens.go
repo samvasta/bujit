@@ -97,6 +97,40 @@ func LengthOfMatch(a, b string) int {
 	return minLen
 }
 
+func (tok *TokenPattern) BestMatch(test string) string {
+	var bestSoFar string
+	bestSoFarMatchLen := 0
+	for _, pattern := range tok.Patterns {
+		prefix, _ := pattern.LiteralPrefix()
+
+		if len(test) > len(prefix) {
+			continue
+		}
+
+		if len(prefix) > 0 {
+			lenOfMatch := LengthOfMatch(test, prefix)
+
+			if lenOfMatch == len(test) && len(test) == len(prefix) {
+				// The token must be 100% literal and be an exact match of the test str
+				return prefix
+			} else {
+				submatches := pattern.FindStringSubmatch(test)
+
+				if len(submatches) > 0 && len(submatches[0]) == len(test) {
+					// The token starts with literals and has an expandable section, but still matches the test str completely
+					return prefix
+				}
+			}
+
+			if lenOfMatch > bestSoFarMatchLen {
+				bestSoFarMatchLen = lenOfMatch
+				bestSoFar = prefix
+			}
+		}
+	}
+	return bestSoFar
+}
+
 func PossibleMatches(test string, possibleTokens []*TokenPattern) (exactMatch *TokenPattern, possibleMatches []*TokenPattern) {
 
 	// Copy possible tokens
@@ -107,6 +141,10 @@ func PossibleMatches(test string, possibleTokens []*TokenPattern) (exactMatch *T
 		isTokenAlreadyAdded := false
 		for _, pattern := range tok.Patterns {
 			prefix, _ := pattern.LiteralPrefix()
+
+			if len(prefix) < len(test) {
+				continue
+			}
 
 			if len(prefix) > 0 {
 				lenOfMatch := LengthOfMatch(test, prefix)

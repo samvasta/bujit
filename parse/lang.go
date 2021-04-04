@@ -10,14 +10,14 @@ type ParseContext struct {
 	tokens            []string
 	currentTokenIndex int
 	isValid           bool
-	session           session.Session
+	session           *session.Session
 }
 
 func (ctx *ParseContext) moveToNextToken() {
 	ctx.currentTokenIndex++
 }
 
-func EmptyParseContext(tokens []string, session session.Session) ParseContext {
+func EmptyParseContext(tokens []string, session *session.Session) ParseContext {
 	return ParseContext{tokens, 1, true, session}
 }
 
@@ -62,6 +62,7 @@ const (
 
 	// Flags
 	FLAG_HELP
+	FLAG_HARD
 
 	// Misc
 	FILTER
@@ -122,7 +123,7 @@ var ModelTokens = []*TokenPattern{
 	allTokens[TRANSACTION],
 }
 
-func ParseExpression(input string, session session.Session) (action actions.Actioner, suggestion AutoSuggestion) {
+func ParseExpression(input string, session *session.Session) (action actions.Actioner, suggestion AutoSuggestion) {
 	tokens := Tokenize(input)
 
 	actionTok := tokens[0]
@@ -130,7 +131,7 @@ func ParseExpression(input string, session session.Session) (action actions.Acti
 	exact, possible := PossibleMatches(actionTok, ActionTokens)
 
 	if exact == nil {
-		return nil, makeAutoSuggestion(false, DisplayNames(possible))
+		return nil, makeAutoSuggestion(false, actionTok, possible)
 	}
 
 	parseContext := EmptyParseContext(tokens, session)
@@ -167,7 +168,11 @@ func ParseNew(context *ParseContext) (action actions.Actioner, suggestion AutoSu
 	nextToken, hasNext := context.nextToken()
 
 	if hasNext {
-		exact, _ := PossibleMatches(nextToken, ModelTokens)
+		exact, possible := PossibleMatches(nextToken, ModelTokens)
+
+		if exact == nil {
+			return nil, makeAutoSuggestion(false, nextToken, possible)
+		}
 
 		switch exact.Id {
 		case CATEGORY:
@@ -178,7 +183,7 @@ func ParseNew(context *ParseContext) (action actions.Actioner, suggestion AutoSu
 			return parseNewAccount(
 				&NewAccountContext{
 					ParseContext: *context,
-					action:       actions_accounts.CreateAccountAction{Session: &context.session}})
+					action:       actions_accounts.CreateAccountAction{Session: context.session}})
 		case ACCOUNT_STATE:
 			context.moveToNextToken()
 			return nil, EmptySuggestions
@@ -188,14 +193,18 @@ func ParseNew(context *ParseContext) (action actions.Actioner, suggestion AutoSu
 		}
 	}
 
-	return nil, makeAutoSuggestion(false, DisplayNames(ModelTokens))
+	return nil, makeAutoSuggestion(false, nextToken, ModelTokens)
 }
 
 func ParseList(context *ParseContext) (action actions.Actioner, suggestion AutoSuggestion) {
 	nextToken, hasNext := context.nextToken()
 
 	if hasNext {
-		exact, _ := PossibleMatches(nextToken, ModelTokens)
+		exact, possible := PossibleMatches(nextToken, ModelTokens)
+
+		if exact == nil {
+			return nil, makeAutoSuggestion(false, nextToken, possible)
+		}
 
 		switch exact.Id {
 		case CATEGORY:
@@ -206,7 +215,7 @@ func ParseList(context *ParseContext) (action actions.Actioner, suggestion AutoS
 			return parseListAccount(
 				&ListAccountContext{
 					ParseContext: *context,
-					action:       actions_accounts.ListAccountAction{Session: &context.session}})
+					action:       actions_accounts.ListAccountAction{Session: context.session}})
 		case ACCOUNT_STATE:
 			context.moveToNextToken()
 			return nil, EmptySuggestions
@@ -216,5 +225,5 @@ func ParseList(context *ParseContext) (action actions.Actioner, suggestion AutoS
 		}
 	}
 
-	return nil, makeAutoSuggestion(false, DisplayNames(ModelTokens))
+	return nil, makeAutoSuggestion(false, nextToken, ModelTokens)
 }
