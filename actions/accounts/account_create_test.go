@@ -10,9 +10,9 @@ import (
 )
 
 func TestCreateAccount(t *testing.T) {
-	session := session.InMemorySession(models.MigrateSchema)
+	s := session.InMemorySession(models.MigrateSchema)
 
-	action := CreateAccountAction{Name: "Account Name", Description: "Account Description", StartingBalance: models.MakeMoney(123.45), CategoryName: "New Category", Session: &session}
+	action := CreateAccountAction{Name: "Account Name", Description: "Account Description", StartingBalance: models.MakeMoney(123.45), CategoryName: "New Category", Session: &s}
 
 	result, consequences := action.Execute()
 
@@ -21,9 +21,14 @@ func TestCreateAccount(t *testing.T) {
 	var account models.Account
 	var accountState models.AccountState
 	var category models.Category
-	accountResult := session.Db.Preload("CurrentState").Find(&account, models.Account{Name: "Account Name"})
-	accountStateResult := session.Db.Find(&accountState, models.AccountState{ID: *account.CurrentStateID})
-	categoryResult := session.Db.Preload("Accounts.CurrentState").Find(&category, models.Category{Name: "New Category"})
+	accountResult := s.Db.Preload("CurrentState").Find(&account, models.Account{Name: "Account Name"})
+	accountStateResult := s.Db.Find(&accountState, models.AccountState{ID: *account.CurrentStateID})
+	categoryResult := s.Db.Preload("Accounts.CurrentState").Find(&category, models.Category{Name: "New Category"})
+
+	// Set the expected session reference.
+	account.Session = nil
+	accountState.Session = nil // Should not be preloaded
+	category.Session = nil     // Should not be preloaded
 
 	assert.Nil(t, accountResult.Error)
 	assert.Nil(t, accountStateResult.Error)
@@ -55,31 +60,39 @@ func TestCreateAccount(t *testing.T) {
 	categoryCreateConsequence := consequences[1]
 
 	assert.Equal(t, actions.CREATE, accountCreateConsequence.ConsequenceType)
+	account.Session = &s // fix expected session ptr
 	assert.Equal(t, account, accountCreateConsequence.Object)
 
 	assert.Equal(t, actions.CREATE, categoryCreateConsequence.ConsequenceType)
-	// assert.Equal(t, category, categoryCreateConsequence.Object)
+
+	for _, c := range consequences {
+		assert.Equal(t, s, *c.Object.(session.Sessioner).GetSession())
+	}
 }
 
 func TestCreateAccountEmptyCategoryNameDoesNotCreateCategory(t *testing.T) {
-	session := session.InMemorySession(models.MigrateSchema)
+	s := session.InMemorySession(models.MigrateSchema)
 
-	action := CreateAccountAction{Name: "Account Name", Description: "Account Description", StartingBalance: models.MakeMoney(123.45), CategoryName: "", Session: &session}
+	action := CreateAccountAction{Name: "Account Name", Description: "Account Description", StartingBalance: models.MakeMoney(123.45), CategoryName: "", Session: &s}
 
-	action.Execute()
+	_, consequences := action.Execute()
 
 	var numCategories int64
-	session.Db.Model(&models.Category{}).Count(&numCategories)
+	s.Db.Model(&models.Category{}).Count(&numCategories)
 	assert.Zero(t, numCategories)
+
+	for _, c := range consequences {
+		assert.Equal(t, s, *c.Object.(session.Sessioner).GetSession())
+	}
 }
 
 func TestCreateAccountExistingCategory(t *testing.T) {
-	session := session.InMemorySession(models.MigrateSchema)
+	s := session.InMemorySession(models.MigrateSchema)
 
 	var originalCategory models.Category
-	session.Db.FirstOrCreate(&originalCategory, models.MakeCategory("Existing Category", "", nil))
+	s.Db.FirstOrCreate(&originalCategory, models.MakeCategory("Existing Category", "", nil))
 
-	action := CreateAccountAction{Name: "Account Name", Description: "Account Description", StartingBalance: models.MakeMoney(123.45), CategoryName: "Existing Category", Session: &session}
+	action := CreateAccountAction{Name: "Account Name", Description: "Account Description", StartingBalance: models.MakeMoney(123.45), CategoryName: "Existing Category", Session: &s}
 
 	result, consequences := action.Execute()
 
@@ -87,8 +100,8 @@ func TestCreateAccountExistingCategory(t *testing.T) {
 
 	var account models.Account
 	var category models.Category
-	accountResult := session.Db.Preload("CurrentState").Find(&account, models.Account{Name: "Account Name"})
-	categoryResult := session.Db.Preload("Accounts.CurrentState").Find(&category, models.Category{Name: "Existing Category"})
+	accountResult := s.Db.Preload("CurrentState").Find(&account, models.Account{Name: "Account Name"})
+	categoryResult := s.Db.Preload("Accounts.CurrentState").Find(&category, models.Category{Name: "Existing Category"})
 
 	assert.Nil(t, accountResult.Error)
 	assert.Nil(t, categoryResult.Error)
@@ -108,9 +121,14 @@ func TestCreateAccountExistingCategory(t *testing.T) {
 	categoryCreateConsequence := consequences[1]
 
 	assert.Equal(t, actions.CREATE, accountCreateConsequence.ConsequenceType)
+	account.Session = &s // fix the expected session ptr
 	assert.Equal(t, account, accountCreateConsequence.Object)
 
 	assert.Equal(t, actions.UPDATE, categoryCreateConsequence.ConsequenceType)
+
+	for _, c := range consequences {
+		assert.Equal(t, s, *c.Object.(session.Sessioner).GetSession())
+	}
 }
 
 func TestCreateAccountDuplicateName(t *testing.T) {

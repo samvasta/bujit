@@ -1,7 +1,6 @@
 package actions_accounts
 
 import (
-	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -64,13 +63,14 @@ func (action ListAccountAction) Execute() (actions.ActionResult, []*actions.Cons
 	action.Session.Db.Joins("CurrentState").Joins("Category").Where(query, conditionValues...).Find(&accounts)
 
 	for _, a := range accounts {
+		a.Session = action.Session
 		consequences = append(consequences, &actions.Consequence{ConsequenceType: actions.READ, Object: a})
 	}
 
-	json, _ := json.Marshal(struct {
+	output := struct {
 		Tree bool `json:"tree"`
-	}{Tree: action.AsTree})
+	}{Tree: action.AsTree}
 
-	return actions.ActionResult{Output: string(json), IsSuccessful: true}, consequences
+	return actions.ActionResult{Output: output, IsSuccessful: true}, consequences
 
 }

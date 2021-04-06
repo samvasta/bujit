@@ -43,6 +43,7 @@ func (action DeleteAccountAction) Execute() (actions.ActionResult, []*actions.Co
 
 	if action.IsHardDelete {
 		for _, account := range accounts {
+			account.Session = action.Session
 			consequences = append(consequences, &actions.Consequence{ConsequenceType: actions.DELETE, Object: account})
 			//delete all account states
 			deleteAccountState(account.CurrentState, action.Session)
@@ -50,6 +51,7 @@ func (action DeleteAccountAction) Execute() (actions.ActionResult, []*actions.Co
 		}
 	} else {
 		for _, account := range accounts {
+			account.Session = action.Session
 			consequences = append(consequences, &actions.Consequence{ConsequenceType: actions.DELETE, Object: account})
 
 			currentState := account.CurrentState

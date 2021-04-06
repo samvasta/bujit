@@ -11,6 +11,10 @@ type Session struct {
 	Db             *gorm.DB
 }
 
+type Sessioner interface {
+	GetSession() *Session
+}
+
 func (s *Session) CurrencySuffixWithSpace() string {
 	if len(s.CurrencySuffix) > 0 {
 		return " " + s.CurrencySuffix

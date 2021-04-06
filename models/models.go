@@ -22,6 +22,10 @@ type Category struct {
 	Session            *session.Session `gorm:"-"` // Ignored by ORM
 }
 
+func (this Category) GetSession() *session.Session {
+	return this.Session
+}
+
 func MakeCategory(name, description string, superCategory *Category, accounts ...Account) Category {
 	category := Category{Name: name, Description: description, Accounts: accounts}
 	category.SetParent(superCategory)
@@ -87,6 +91,10 @@ type AccountState struct {
 	Session     *session.Session `gorm:"-"` // Ignored by ORM
 }
 
+func (this AccountState) GetSession() *session.Session {
+	return this.Session
+}
+
 func (as AccountState) MarshalJSON() ([]byte, error) {
 	details := make(map[string]interface{})
 	details["id"] = as.ID
@@ -108,6 +116,10 @@ type Account struct {
 	CategoryID     *uint
 	Category       Category
 	Session        *session.Session `gorm:"-"` // Ignored by ORM
+}
+
+func (this Account) GetSession() *session.Session {
+	return this.Session
 }
 
 func (account *Account) Balance() Money {
@@ -143,6 +155,10 @@ type Transaction struct {
 	Destination   *Account `gorm:"foreignkey:DestinationID"`
 	Memo          string
 	Session       *session.Session `gorm:"-"` // Ignored by ORM
+}
+
+func (this Transaction) GetSession() *session.Session {
+	return this.Session
 }
 
 func (tran *Transaction) SourceExists() bool {

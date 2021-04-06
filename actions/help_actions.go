@@ -1,8 +1,6 @@
 package actions
 
 import (
-	"encoding/json"
-
 	"samvasta.com/bujit/models/output"
 )
 
@@ -11,7 +9,6 @@ type HelpAction struct {
 }
 
 func (helpAction HelpAction) Execute() (ActionResult, []*Consequence) {
-	jsonHelpItems, _ := json.Marshal(helpAction.HelpItems)
 
-	return ActionResult{Output: string(jsonHelpItems), IsSuccessful: true}, []*Consequence{}
+	return ActionResult{Output: helpAction.HelpItems, IsSuccessful: true}, []*Consequence{}
 }

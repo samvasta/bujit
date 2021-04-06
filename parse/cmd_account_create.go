@@ -48,8 +48,7 @@ func parseNewAccount(context *NewAccountContext) (action actions.Actioner, sugge
 	missingTokens := context.possibleNextTokens()
 
 	if hasNext {
-		possibleTokens := missingTokens
-		exact, possible := PossibleMatches(nextToken, possibleTokens)
+		exact, possible := PossibleMatches(nextToken, missingTokens)
 
 		if exact == nil {
 			return nil, makeAutoSuggestion(false, nextToken, possible)

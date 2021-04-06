@@ -20,7 +20,7 @@ func (action CreateAccountAction) IsValid() bool {
 
 func (action CreateAccountAction) Execute() (actions.ActionResult, []*actions.Consequence) {
 
-	account := models.Account{Name: action.Name, Description: action.Description, IsActive: true, CurrentState: models.AccountState{Balance: action.StartingBalance}}
+	account := models.Account{Name: action.Name, Description: action.Description, IsActive: true, CurrentState: models.AccountState{Balance: action.StartingBalance}, Session: action.Session}
 	tx := action.Session.Db.Create(&account)
 
 	if tx.Error != nil {
@@ -35,6 +35,7 @@ func (action CreateAccountAction) Execute() (actions.ActionResult, []*actions.Co
 		// Upsert category
 		var category models.Category
 		tx := action.Session.Db.FirstOrCreate(&category, models.Category{Name: action.CategoryName})
+		category.Session = action.Session
 		isCategoryNew := tx.RowsAffected > 0
 
 		if tx.Error != nil {

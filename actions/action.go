@@ -37,13 +37,28 @@ const (
 	DELETE
 )
 
+func (this ConsequenceType) String() string {
+	switch this {
+	case CREATE:
+		return "Create"
+	case READ:
+		return "Read"
+	case UPDATE:
+		return "Update"
+	case DELETE:
+		return "Delete"
+	default:
+		return ""
+	}
+}
+
 type Consequence struct {
 	ConsequenceType ConsequenceType
 	Object          json.Marshaler
 }
 
 type ActionResult struct {
-	Output       string
+	Output       interface{}
 	IsSuccessful bool
 }
 

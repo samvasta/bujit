@@ -4,6 +4,7 @@ package cli
 // component library.
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"strings"
@@ -14,6 +15,7 @@ import (
 	"github.com/olekukonko/ts"
 	"samvasta.com/bujit/actions"
 	"samvasta.com/bujit/cli/customtext"
+	"samvasta.com/bujit/cli/outputview"
 	"samvasta.com/bujit/models"
 	"samvasta.com/bujit/parse"
 	"samvasta.com/bujit/session"
@@ -106,7 +108,13 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					result, consequences := action.Execute()
 					m.result = result
 					m.consequences = consequences
-					m.historyLog.WriteString(result.Output)
+					m.historyLog.WriteString(outputview.View(m.result.Output))
+					for _, c := range consequences {
+						json, err := json.Marshal(c.Object)
+						if err == nil {
+							m.historyLog.WriteString(fmt.Sprintf("\n%s: %s", c.ConsequenceType, string(json)))
+						}
+					}
 					m.historyLog.WriteString("\n")
 					if result.IsSuccessful {
 						m.historyLog.WriteString("success!")

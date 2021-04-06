@@ -275,8 +275,8 @@ func TestPossibleMatches2(t *testing.T) {
 	exactMatch, possibleMatches := PossibleMatches("fact", tokens)
 
 	assert.Equal(t, tokens[2], exactMatch)
-	assert.Contains(t, possibleMatches, tokens[0])
-	assert.Contains(t, possibleMatches, tokens[1])
+	assert.NotContains(t, possibleMatches, tokens[0])
+	assert.NotContains(t, possibleMatches, tokens[1])
 	assert.NotContains(t, possibleMatches, tokens[3])
 }
 

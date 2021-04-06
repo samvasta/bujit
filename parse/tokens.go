@@ -128,6 +128,10 @@ func (tok *TokenPattern) BestMatch(test string) string {
 			}
 		}
 	}
+	if bestSoFarMatchLen == 0 {
+		return tok.DisplayName
+	}
+
 	return bestSoFar
 }
 
@@ -140,9 +144,9 @@ func PossibleMatches(test string, possibleTokens []*TokenPattern) (exactMatch *T
 	for i, tok := range possibleTokens {
 		isTokenAlreadyAdded := false
 		for _, pattern := range tok.Patterns {
-			prefix, _ := pattern.LiteralPrefix()
+			prefix, isComplete := pattern.LiteralPrefix()
 
-			if len(prefix) < len(test) {
+			if isComplete && len(prefix) < len(test) {
 				continue
 			}
 
