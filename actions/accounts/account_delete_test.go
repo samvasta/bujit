@@ -84,7 +84,7 @@ func TestDeleteAccountAction_DoesNotExist(t *testing.T) {
 	result, consequences := action.Execute()
 
 	assert.False(t, result.IsSuccessful)
-	assert.JSONEq(t, `{"detail": "No account with name 'Does not exist'"}`, result.Output)
+	assert.Equal(t, `{"detail": "No account with name 'Does not exist'"}`, result.Output)
 	assert.Len(t, consequences, 0)
 
 	for _, c := range consequences {

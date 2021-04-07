@@ -19,6 +19,10 @@ type ListAccountAction struct {
 	Session      *session.Session
 }
 
+type ListAccountOutput struct {
+	Tree bool `json="tree"`
+}
+
 func (action ListAccountAction) IsValid() bool {
 	return action.Session != nil
 }
@@ -67,9 +71,7 @@ func (action ListAccountAction) Execute() (actions.ActionResult, []*actions.Cons
 		consequences = append(consequences, &actions.Consequence{ConsequenceType: actions.READ, Object: a})
 	}
 
-	output := struct {
-		Tree bool `json:"tree"`
-	}{Tree: action.AsTree}
+	output := ListAccountOutput{Tree: action.AsTree}
 
 	return actions.ActionResult{Output: output, IsSuccessful: true}, consequences
 

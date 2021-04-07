@@ -34,9 +34,9 @@ func TestListAccountAction(t *testing.T) {
 
 			assert.True(t, result.IsSuccessful)
 			if action.AsTree {
-				assert.JSONEq(t, `{"tree": true}`, result.Output)
+				assert.Equal(t, ListAccountOutput{Tree: true}, result.Output)
 			} else {
-				assert.JSONEq(t, `{"tree": false}`, result.Output)
+				assert.Equal(t, ListAccountOutput{Tree: false}, result.Output)
 			}
 
 			assert.Len(t, consequences, len(expected))
