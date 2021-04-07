@@ -44,6 +44,8 @@ func View(item interface{}) string {
 		return TextView(i)
 	case output.UnorderedList:
 		return UnorderedListView(i)
+	case output.HorizontalRule:
+		return HorizontalRuleView(i)
 	default:
 		return termenv.
 			String(fmt.Sprintf("!!Type %T not supported yet.!!", i)).
@@ -53,99 +55,81 @@ func View(item interface{}) string {
 	}
 }
 
-func WrappedString(text string, initialIndent, indentLevel int) string {
-	size, _ := ts.GetSize()
-	sb := strings.Builder{}
-
-	sb.WriteString(strings.Repeat("  ", initialIndent-indentLevel))
-	chunkSize := size.Col() - (indentLevel)*2
-
-	prevIdx := 0
-	for idx := chunkSize - initialIndent*2; idx < len(text); idx += chunkSize {
-		sb.WriteString(strings.Repeat("  ", indentLevel))
-		sb.WriteString(text[prevIdx:idx])
-		sb.WriteString("\n")
-		prevIdx = idx
-	}
-	return sb.String()
-}
-
 var wordsRegex = regexp.MustCompile(`\s`)
 
-func BetterWrappedStringBlock(text string, initialCol, minCol, maxCol int) string {
+func WrappedString(text string, startCol, minCol, maxCol int, terminalWidth int) string {
+
+	if maxCol > terminalWidth {
+		maxCol = terminalWidth
+	}
+
+	if minCol >= maxCol {
+		panic("MinCol must be < MaxCol")
+	}
+	if startCol >= maxCol {
+		panic("StartCol must be < MaxCol")
+	}
+	if terminalWidth < 1 {
+		panic("TerminalWidth must be at least 1")
+	}
+
 	splitPoints := []int{}
 	for _, idx := range wordsRegex.FindAllStringIndex(text, -1) {
 		splitPoints = append(splitPoints, idx[0])
 	}
 	splitPoints = append(splitPoints, len(text))
 
-	size, _ := ts.GetSize()
 	sb := strings.Builder{}
 
-	if maxCol > size.Col() {
-		maxCol = size.Col()
-	}
-
-	maxWidth := maxCol - minCol
-
-	// Pad out to initial col
-	// sb.WriteString(strings.Repeat(" ", initialCol))
-
+	outputColStart := startCol
 	start := 0
 	currentIdx := 0
 	for currentIdx < len(splitPoints) {
+		maxWidth := maxCol - outputColStart
 		end := splitPoints[currentIdx]
 
 		// handle case where word is longer than the max width
 		for end > start && end-start > maxWidth {
-			sb.WriteString(strings.Repeat(" ", minCol))
+			// print next chunk
 			sb.WriteString(text[start:start+maxWidth] + "\n")
+
 			start += maxWidth
+
+			// recompute
+			outputColStart = minCol
+			maxWidth = maxCol - outputColStart
+			// pad out to line start
+			sb.WriteString(strings.Repeat(" ", outputColStart))
 		}
 
 		// handle case where multiple words can fit on one line
-		for end < start && end-start < maxWidth {
+		for currentIdx+1 < len(splitPoints) && splitPoints[currentIdx+1]-start < maxWidth {
 			currentIdx++
 			end = splitPoints[currentIdx]
 		}
 
-		sb.WriteString(strings.Repeat(" ", minCol))
+		// print next chunk
 		sb.WriteString(text[start:end] + "\n")
-		start += maxWidth
+		// reset start to the min col
+		outputColStart = minCol
+		if currentIdx+1 < len(splitPoints) {
+			// pad out to line start for next line
+			sb.WriteString(strings.Repeat(" ", outputColStart))
+		}
+
+		// move start to the next unprinted char so we don't repeat anything
+		start = end + 1
+		// move to next split point
 		currentIdx++
 	}
 
 	return sb.String()
 }
 
-func WrappedStringBlock(text string, initialCol, minCol, maxCol int) string {
-	size, _ := ts.GetSize()
-	sb := strings.Builder{}
-
-	if maxCol > size.Col() {
-		maxCol = size.Col()
-	}
-
-	chunkSize := maxCol - minCol
-
-	sb.WriteString(strings.Repeat(" ", initialCol))
-	prevIdx := 0
-	idx := chunkSize - (initialCol - minCol)
-	sb.WriteString(text[prevIdx:idx])
-	sb.WriteRune('\n')
-
-	for prevIdx, idx = idx, idx+chunkSize; idx < len(text); idx += chunkSize {
-		sb.WriteString(strings.Repeat(" ", minCol))
-		sb.WriteString(text[prevIdx:idx])
-		sb.WriteRune('\n')
-		prevIdx = idx
-	}
-	return sb.String()
-}
-
 func TextView(t output.Text) string {
+	size, _ := ts.GetSize()
 	output := termenv.
-		String(WrappedString(t.Text, 0, t.Indent)).
+		String(WrappedString(t.Text, 0, t.Indent*2, size.Col(), size.Col())).
 		Foreground(TerminalColor(t.Style.Color))
 
 	if t.Style.IsBold {
@@ -161,6 +145,42 @@ func TextView(t output.Text) string {
 	return output.String()
 }
 
+func HorizontalRuleView(hr output.HorizontalRule) string {
+	size, _ := ts.GetSize()
+	output := termenv.String(strings.Repeat(hr.RuleChar, size.Col())).
+		Foreground(TerminalColor(hr.Style.Color))
+
+	if hr.Style.IsBold {
+		output = output.Bold()
+	}
+	if hr.Style.IsItalic {
+		output = output.Italic()
+	}
+	if hr.Style.IsUnderline {
+		output = output.Underline()
+	}
+
+	return output.String()
+}
+
 func UnorderedListView(ul output.UnorderedList) string {
-	return BetterWrappedStringBlock("hello goodbye. captain! ok abcdefghijklmnopqrstuvwxyz", 5, 5, 20)
+	size, _ := ts.GetSize()
+	sb := strings.Builder{}
+	for _, item := range ul.Items {
+		sb.WriteString(strings.Repeat("  ", ul.Indent))
+		sb.WriteString(ul.BulletChar + "  ")
+		text := termenv.String(WrappedString(item.Text, ul.Indent*3+1, ul.Indent*5, size.Col(), size.Col())).Foreground(TerminalColor(item.Style.Color))
+		if item.Style.IsBold {
+			text = text.Bold()
+		}
+		if item.Style.IsItalic {
+			text = text.Italic()
+		}
+		if item.Style.IsUnderline {
+			text = text.Underline()
+		}
+
+		sb.WriteString(text.String())
+	}
+	return sb.String()
 }
