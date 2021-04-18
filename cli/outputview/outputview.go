@@ -3,10 +3,14 @@ package outputview
 import (
 	"fmt"
 	"regexp"
+	"sort"
 	"strings"
 
 	"github.com/muesli/termenv"
 	"github.com/olekukonko/ts"
+	"samvasta.com/bujit/actions"
+	actions_accounts "samvasta.com/bujit/actions/accounts"
+	"samvasta.com/bujit/models"
 	"samvasta.com/bujit/models/output"
 )
 
@@ -31,12 +35,14 @@ func TerminalColor(col output.ColorHint) termenv.Color {
 	}
 }
 
-func View(item interface{}) string {
+func View(item interface{}, consequences []*actions.Consequence) string {
 	switch i := item.(type) {
+	case actions_accounts.ListAccountOutput:
+		return ListAccountView(i, consequences)
 	case []output.Helper:
 		sb := strings.Builder{}
 		for _, helper := range i {
-			sb.WriteString(View(helper))
+			sb.WriteString(View(helper, consequences))
 			sb.WriteString("\n")
 		}
 		return sb.String()
@@ -52,6 +58,51 @@ func View(item interface{}) string {
 			Background(termenv.ANSIBrightRed).
 			Foreground(termenv.ANSIBrightWhite).
 			String()
+	}
+}
+
+func ListAccountView(lao actions_accounts.ListAccountOutput, consequences []*actions.Consequence) string {
+	sortedConsequences := []*actions.Consequence{}
+	copy(sortedConsequences, consequences)
+	sort.Slice(sortedConsequences, func(a, b int) bool {
+		accountA, okA := sortedConsequences[a].Object.(models.Account)
+		accountB, okB := sortedConsequences[b].Object.(models.Account)
+
+		if !okA && !okB {
+			return true
+		}
+		if !okA {
+			return false
+		}
+		if !okB {
+			return true
+		}
+
+		if accountA.Category.FullyQualifiedName == accountB.Category.FullyQualifiedName {
+			// both accounts in same category. compare by account name
+			return accountA.Name < accountB.Name
+		} else if accountA.Category.FullyQualifiedName < accountB.Category.FullyQualifiedName {
+			return true
+		} else {
+			return false
+		}
+	})
+
+	sortedAccountNames := []string{}
+	for _, a := range sortedConsequences {
+		account, ok := a.Object.(models.Account)
+		if ok {
+			sortedAccountNames = append(sortedAccountNames, account.Name)
+		}
+	}
+
+	if lao.Tree {
+		return "tree: "
+	} else {
+		view := output.EmptyOutputGroup().
+			UnorderedList(sortedAccountNames, output.NormalBulletChar).
+			ToSlice()
+		return View(view, consequences)
 	}
 }
 
