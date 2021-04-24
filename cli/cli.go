@@ -75,6 +75,7 @@ type model struct {
 	session    *session.Session
 	textInput  customtext.Model
 	suggestion parse.AutoSuggestion
+	historyIdx int
 	history    *history
 }
 
@@ -88,9 +89,10 @@ func initialModel(session *session.Session, history *history) model {
 	ti.Width = size.Col() - len(ti.Prompt) - 1
 
 	return model{
-		textInput: ti,
-		session:   session,
-		history:   history,
+		textInput:  ti,
+		session:    session,
+		historyIdx: len(history.prevCommands),
+		history:    history,
 	}
 }
 
@@ -119,6 +121,21 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch msg.Type {
+		case tea.KeyUp:
+			if m.historyIdx > 0 {
+				m.historyIdx--
+				m.textInput.SetValue(m.history.prevCommands[m.historyIdx])
+			}
+		case tea.KeyDown:
+			if m.historyIdx < len(m.history.prevCommands)-1 {
+				m.historyIdx++
+				m.textInput.SetValue(m.history.prevCommands[m.historyIdx])
+			} else {
+				if m.historyIdx < len(m.history.prevCommands) {
+					m.historyIdx++
+				}
+				m.textInput.SetValue("")
+			}
 		case tea.KeyEnter:
 
 			if m.session != nil {
